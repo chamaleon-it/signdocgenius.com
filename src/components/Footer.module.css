@@ -1,0 +1,130 @@
+.footer {
+  background-color: var(--ds-gray-light);
+  padding-top: 64px;
+}
+
+.topContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 64px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 48px;
+}
+
+.linksGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 64px;
+  flex: 1;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.columnTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--ds-black);
+}
+
+.link {
+  font-size: 0.875rem;
+  color: var(--ds-text-primary);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.socialAndLang {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 32px;
+}
+
+.langSelect {
+  padding: 8px 16px;
+  border: 1px solid var(--ds-gray-border);
+  border-radius: 4px;
+  background-color: var(--ds-white);
+  min-width: 150px;
+}
+
+.socialIcons {
+  display: flex;
+  gap: 16px;
+}
+
+.icon {
+  width: 32px;
+  height: 32px;
+  background-color: var(--ds-black);
+  color: var(--ds-white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.bottomBar {
+  background-color: #171717;
+  color: #fff;
+  padding: 24px 0;
+}
+
+.bottomContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.copyright {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.bottomLinks {
+  display: flex;
+  gap: 24px;
+}
+
+.bottomLink {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.bottomLink:hover {
+  color: #fff;
+}
+
+.feedbackButton {
+  background-color: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .linksGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .socialAndLang {
+    align-items: flex-start;
+  }
+}

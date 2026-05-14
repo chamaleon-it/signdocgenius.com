@@ -1,0 +1,89 @@
+.hero {
+  background: linear-gradient(180deg, var(--ds-purple-light) 0%, var(--ds-purple-dark) 100%);
+  color: var(--ds-white);
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  font-size: 3.5rem;
+  font-weight: 400;
+  margin-bottom: 24px;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  margin-bottom: 24px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.subtext {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  font-size: 0.75rem;
+  max-width: 480px;
+  margin-bottom: 24px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.checkbox {
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.consentLabel {
+  line-height: 1.4;
+}
+
+.form {
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+  height: 56px;
+  margin-bottom: 16px;
+}
+
+.input {
+  flex: 1;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px 0 0 4px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.button {
+  background-color: var(--ds-black);
+  color: var(--ds-white);
+  padding: 0 24px;
+  border-radius: 0 4px 4px 0;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.button:hover {
+  background-color: #333;
+}
+
+.loginText {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.loginLink {
+  color: var(--ds-white);
+  text-decoration: underline;
+  font-weight: 500;
+}
