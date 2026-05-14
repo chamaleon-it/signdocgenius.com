@@ -1,25 +1,21 @@
-import Header from '../components/Header';
+'use client';
+
 import Hero from '../components/Hero';
 import CustomerLogos from '../components/CustomerLogos';
 import Features from '../components/Features';
 import Security from '../components/Security';
 import Integrations from '../components/Integrations';
 import CTA from '../components/CTA';
-import Footer from '../components/Footer';
 
 export default function Home() {
   return (
-    <>
-      <Header />
-      <main>
-        <Hero />
-        <CustomerLogos />
-        <Features />
-        <Security />
-        <Integrations />
-        <CTA />
-      </main>
-      <Footer />
-    </>
+    <div className="flex flex-col gap-20">
+      <Hero />
+      <CustomerLogos />
+      <Features />
+      <Security />
+      <Integrations />
+      <CTA />
+    </div>
   );
 }

@@ -1,59 +1,82 @@
-import styles from './Footer.module.css';
+import React from 'react';
+import Link from 'next/link';
+import { Shield, Mail, FileText, User } from 'lucide-react';
 
-export default function Footer() {
+export function Footer() {
+  const sections = [
+    {
+      title: "Product",
+      links: ["eSignature", "Contract Lifecycle Management", "Document Generation", "Pricing"]
+    },
+    {
+      title: "Solutions",
+      links: ["Real Estate", "Financial Services", "Human Resources", "Legal"]
+    },
+    {
+      title: "Support",
+      links: ["Help Center", "Community", "Developer Center", "Trust Center"]
+    },
+    {
+      title: "Company",
+      links: ["About Us", "Careers", "Contact", "Investors"]
+    }
+  ];
+
   return (
-    <footer className={styles.footer}>
-      <div className={styles.topContainer}>
-        <div className={styles.linksGrid}>
-          <div className={styles.column}>
-            <h4 className={styles.columnTitle}>Docusign</h4>
-            <a href="#" className={styles.link}>Products</a>
-            <a href="#" className={styles.link}>Pricing</a>
+    <footer className="bg-slate-900 text-slate-400 py-16 px-6 border-t border-slate-800">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-12 mb-16">
+          <div className="col-span-2">
+            <Link href="/" className="flex items-center gap-2 mb-6">
+              <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center">
+                <Shield className="text-white" size={20} />
+              </div>
+              <span className="text-xl font-bold tracking-tight text-white">DocuSign</span>
+            </Link>
+            <p className="max-w-xs text-sm leading-relaxed mb-6">
+              Docusign helps organizations connect and automate how they prepare, sign, act on, and manage agreements.
+            </p>
+            <div className="flex gap-4">
+              <SocialIcon icon={<Mail size={18} />} />
+              <SocialIcon icon={<FileText size={18} />} />
+              <SocialIcon icon={<User size={18} />} />
+            </div>
           </div>
-          <div className={styles.column}>
-            <h4 className={styles.columnTitle}>Use Cases</h4>
-            <a href="#" className={styles.link}>Customer Sales</a>
-            <a href="#" className={styles.link}>Small Business</a>
-          </div>
-          <div className={styles.column}>
-            <h4 className={styles.columnTitle}>Support</h4>
-            <a href="#" className={styles.link}>Support Center</a>
-            <a href="#" className={styles.link}>Docusign Community</a>
-            <a href="#" className={styles.link}>Trust Center</a>
-            <a href="#" className={styles.link}>Security</a>
-          </div>
-          <div className={styles.column}>
-            <h4 className={styles.columnTitle}>About Us</h4>
-            <a href="#" className={styles.link}>Leadership</a>
-            <a href="#" className={styles.link}>Investors</a>
-            <a href="#" className={styles.link}>Careers</a>
-          </div>
+          
+          {sections.map((section) => (
+            <div key={section.title}>
+              <h4 className="text-white font-bold text-sm mb-4 uppercase tracking-widest">{section.title}</h4>
+              <ul className="space-y-3">
+                {section.links.map((link) => (
+                  <li key={link}>
+                    <Link href="#" className="text-sm hover:text-white transition-colors">{link}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
-        <div className={styles.socialAndLang}>
-          <select className={styles.langSelect}>
-            <option>English</option>
-          </select>
-          <div className={styles.socialIcons}>
-            <span className={styles.icon}>X</span>
-            <span className={styles.icon}>In</span>
-            <span className={styles.icon}>YT</span>
-            <span className={styles.icon}>IG</span>
+        
+        <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
+          <p className="text-xs">© 2026 DocuSign, Inc. All rights reserved.</p>
+          <div className="flex gap-8 text-xs font-medium">
+            <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="#" className="hover:text-white transition-colors">Terms of Use</Link>
+            <Link href="#" className="hover:text-white transition-colors">Accessibility</Link>
+            <Link href="#" className="hover:text-white transition-colors">Cookies Settings</Link>
           </div>
-        </div>
-      </div>
-      <div className={styles.bottomBar}>
-        <div className={styles.bottomContainer}>
-          <span className={styles.copyright}>
-            © Docusign, Inc. 2024. All rights reserved.
-          </span>
-          <div className={styles.bottomLinks}>
-            <a href="#" className={styles.bottomLink}>Terms of Use</a>
-            <a href="#" className={styles.bottomLink}>Privacy Policy</a>
-            <a href="#" className={styles.bottomLink}>Cookie Settings</a>
-          </div>
-          <button className={styles.feedbackButton}>Feedback</button>
         </div>
       </div>
     </footer>
   );
 }
+
+function SocialIcon({ icon }: { icon: React.ReactNode }) {
+  return (
+    <Link href="#" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all">
+      {icon}
+    </Link>
+  );
+}
+
+export default Footer;

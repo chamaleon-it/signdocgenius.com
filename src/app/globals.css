@@ -1,64 +1,52 @@
-:root {
-  --ds-purple-dark: #2B0061;
-  --ds-purple-main: #430098;
-  --ds-purple-light: #5800E8;
-  --ds-purple-hover: #4e00ce;
-  --ds-text-primary: #171717;
-  --ds-text-secondary: #4a4a4a;
-  --ds-gray-light: #f4f4f4;
-  --ds-gray-border: #e0e0e0;
-  --ds-white: #ffffff;
-  --ds-black: #000000;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  
+  --color-brand-primary: #430098;
+  --color-brand-secondary: #2B0061;
+  --color-brand-light: #5800E8;
+  --color-brand-hover: #4e00ce;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+:root {
+  --font-inter: "Inter", sans-serif;
 }
 
 body {
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: var(--ds-text-primary);
-  background-color: var(--ds-white);
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  @apply bg-slate-50 text-slate-900 antialiased;
+  font-family: var(--font-sans);
 }
 
-a {
-  text-decoration: none;
-  color: inherit;
+/* Custom Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
 }
 
-ul {
-  list-style: none;
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
 
-button {
-  cursor: pointer;
-  border: none;
-  background: none;
-  font-family: inherit;
+/* Glassmorphism */
+.glass {
+  @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl;
 }
 
-input {
-  font-family: inherit;
+.glass-dark {
+  @apply bg-slate-900/70 backdrop-blur-lg border border-slate-700/30 shadow-xl;
 }
 
-/* Utility classes for layout when not using Tailwind */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.justify-center { justify-content: center; }
-.gap-4 { gap: 16px; }
-.gap-8 { gap: 32px; }
-.w-full { width: 100%; }
-.h-full { height: 100%; }
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+}
