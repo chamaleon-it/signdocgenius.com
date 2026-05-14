@@ -19,7 +19,7 @@ export function UploadPdf({ onNext, onBack, initialFile }: UploadPdfProps) {
     if (acceptedFiles.length > 0) {
       setFile(acceptedFiles[0]);
     } else if (rejectedFiles.length > 0) {
-      alert('Please upload a valid PDF file. Images and other formats are not supported.');
+      alert('Please upload a valid PDF or Image file.');
     }
   }, []);
 
@@ -27,6 +27,7 @@ export function UploadPdf({ onNext, onBack, initialFile }: UploadPdfProps) {
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],
+      'image/*': ['.png', '.jpg', '.jpeg']
     },
     maxFiles: 1,
   });
@@ -51,7 +52,7 @@ export function UploadPdf({ onNext, onBack, initialFile }: UploadPdfProps) {
     >
       <div className="text-center mb-10">
         <h2 className="text-3xl font-black text-slate-900 mb-3 tracking-tight">Upload Document</h2>
-        <p className="text-slate-500 font-medium">Select the PDF file you want to sign</p>
+        <p className="text-slate-500 font-medium">Select a PDF or an Image to sign</p>
       </div>
 
       <div
@@ -89,34 +90,32 @@ export function UploadPdf({ onNext, onBack, initialFile }: UploadPdfProps) {
             </div>
             <div>
               <p className="text-2xl font-black text-slate-900 mb-2">
-                Drag & Drop PDF Here
+                Drag & Drop Here
               </p>
               <p className="text-slate-500 font-medium">
-                or click to browse from your computer
+                PDF, PNG or JPG (Max 10MB)
               </p>
             </div>
             {isDragReject && (
-              <p className="text-sm text-red-500 mt-4 font-bold">Please upload a valid PDF file</p>
+              <p className="text-sm text-red-500 mt-4 font-bold">Unsupported file format</p>
             )}
           </div>
         )}
       </div>
 
-      <div className="flex items-center justify-between mt-10 gap-4">
+      <div className="mt-10 flex gap-4">
         <button
           onClick={onBack}
-          className="flex-1 py-4 px-6 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-slate-100"
+          className="flex-1 py-4 px-6 rounded-2xl bg-slate-100 text-slate-600 font-black uppercase tracking-widest hover:bg-slate-200 transition-all text-sm"
         >
-          <ArrowLeft className="mr-2" size={20} />
           Back
         </button>
         <button
           onClick={handleNext}
           disabled={!file}
-          className="flex-1 py-4 px-6 rounded-2xl font-black text-white bg-brand-primary hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-brand-primary/20 shadow-lg shadow-brand-primary/20"
+          className="flex-2 py-4 px-6 rounded-2xl bg-brand-primary text-white font-black uppercase tracking-widest hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-brand-primary/20 text-sm"
         >
           Next Step
-          <ArrowRight className="ml-2" size={20} />
         </button>
       </div>
     </motion.div>

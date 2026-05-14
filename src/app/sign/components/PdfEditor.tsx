@@ -63,9 +63,31 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
 
   const [isExporting, setIsExporting] = useState(false);
   const [pdfDimensions, setPdfDimensions] = useState({ width: 0, height: 0 });
+  const [isImage, setIsImage] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string>('');
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const checkFileType = async () => {
+      if (pdfFile.type.startsWith('image/')) {
+        setIsImage(true);
+        setNumPages(1);
+        const url = URL.createObjectURL(pdfFile);
+        setImageSrc(url);
+
+        const img = new Image();
+        img.onload = () => {
+          setPdfDimensions({ width: img.width, height: img.height });
+        };
+        img.src = url;
+      } else {
+        setIsImage(false);
+      }
+    };
+    checkFileType();
+  }, [pdfFile]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -124,28 +146,54 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
     try {
       setIsExporting(true);
 
-      const pdfBytes = await pdfFile.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(pdfBytes);
+      let pdfDoc;
+      if (isImage) {
+        pdfDoc = await PDFDocument.create();
+        const imgBytes = await pdfFile.arrayBuffer();
+        let bgImage;
+        try {
+          if (pdfFile.type === 'image/png' || pdfFile.name.toLowerCase().endsWith('.png')) {
+            bgImage = await pdfDoc.embedPng(imgBytes);
+          } else {
+            bgImage = await pdfDoc.embedJpg(imgBytes);
+          }
+        } catch (e) {
+          try {
+            bgImage = await pdfDoc.embedPng(imgBytes);
+          } catch (e2) {
+            bgImage = await pdfDoc.embedJpg(imgBytes);
+          }
+        }
+        const page = pdfDoc.addPage([bgImage.width, bgImage.height]);
+        page.drawImage(bgImage, { x: 0, y: 0, width: bgImage.width, height: bgImage.height });
+      } else {
+        const pdfBytes = await pdfFile.arrayBuffer();
+        pdfDoc = await PDFDocument.load(pdfBytes);
+      }
+
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-      // Load signature image once
       const sigResponse = await fetch(signaturePreview);
       const sigBytes = await sigResponse.arrayBuffer();
       let signatureImage;
-      if (signaturePreview.includes('png') || signaturePreview.startsWith('data:image/png')) {
+      try {
+        if (signaturePreview.includes('png') || signaturePreview.startsWith('data:image/png')) {
+          signatureImage = await pdfDoc.embedPng(sigBytes);
+        } else {
+          signatureImage = await pdfDoc.embedJpg(sigBytes);
+        }
+      } catch (e) {
         signatureImage = await pdfDoc.embedPng(sigBytes);
-      } else {
-        signatureImage = await pdfDoc.embedJpg(sigBytes);
       }
 
       const pages = pdfDoc.getPages();
 
       for (const el of elements) {
+        if (el.page > pages.length) continue;
+
         const activePage = pages[el.page - 1];
         const { width: pdfWidth, height: pdfHeight } = activePage.getSize();
 
-        // Scale ratio from screen to PDF points
-        // Assuming we use originalWidth/Height for calculation
         const ratioX = pdfWidth / pdfDimensions.width;
         const ratioY = pdfHeight / pdfDimensions.height;
 
@@ -161,13 +209,11 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
             width: finalWidth,
             height: finalHeight,
             opacity: el.opacity,
-            // degrees: degrees(el.rotation) // pdf-lib degrees import needed
           });
         } else if (el.type === 'text') {
           const finalX = el.x * ratioX;
           const finalY = pdfHeight - (el.y * ratioY) - (el.fontSize * ratioY);
 
-          // Basic color hex to rgb
           const hex = el.color.replace('#', '');
           const r = parseInt(hex.substring(0, 2), 16) / 255;
           const g = parseInt(hex.substring(2, 4), 16) / 255;
@@ -184,12 +230,13 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
       }
 
       const pdfBytesModified = await pdfDoc.save();
-      const blob = new Blob([pdfBytesModified.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytesModified as any], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
 
       const link = document.createElement('a');
       link.href = url;
-      link.download = `signed_${pdfFile.name}`;
+      const fileName = pdfFile.name.split('.')[0];
+      link.download = `signed_${fileName}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -208,8 +255,8 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
   return (
     <div className="w-full h-[85vh] flex flex-col lg:flex-row gap-4">
       {/* Sidebar Tools */}
-      <div className="w-full lg:w-20 flex lg:flex-col gap-3 bg-white border border-slate-200 rounded-[2rem] p-3 shadow-xl shadow-slate-200/50">
-        <button 
+      <div className="w-full lg:w-20 flex lg:flex-col gap-3 bg-white border border-slate-200 rounded-4xl p-3 shadow-xl shadow-slate-200/50">
+        <button
           onClick={addSignature}
           className="flex-1 lg:flex-none aspect-square flex flex-col items-center justify-center rounded-[1.2rem] bg-brand-primary hover:bg-brand-hover text-white transition-all shadow-lg shadow-brand-primary/20 group"
           title="Add Signature"
@@ -217,7 +264,7 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
           <Plus size={22} className="mb-1 group-hover:scale-110 transition-transform" />
           <span className="text-[9px] font-black uppercase tracking-wider">Sign</span>
         </button>
-        <button 
+        <button
           onClick={addText}
           className="flex-1 lg:flex-none aspect-square flex flex-col items-center justify-center rounded-[1.2rem] bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all group"
           title="Add Text"
@@ -226,7 +273,7 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
           <span className="text-[9px] font-black uppercase tracking-wider">Text</span>
         </button>
         <div className="hidden lg:block h-px bg-slate-100 my-1" />
-        <button 
+        <button
           onClick={onBack}
           className="flex-1 lg:flex-none aspect-square flex flex-col items-center justify-center rounded-[1.2rem] bg-white border-2 border-slate-100 text-slate-400 hover:text-slate-600 hover:border-slate-200 transition-all group"
         >
@@ -236,7 +283,7 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
       </div>
 
       {/* Main Viewport */}
-      <div className="flex-1 bg-white border border-slate-200 rounded-[2rem] flex flex-col overflow-hidden relative shadow-2xl shadow-slate-200/50">
+      <div className="flex-1 bg-white border border-slate-200 rounded-4xl flex flex-col overflow-hidden relative shadow-2xl shadow-slate-200/50">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
@@ -247,7 +294,7 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Page {pageNumber} of {numPages}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 bg-slate-100 rounded-xl p-1">
             <button onClick={zoomOut} className="p-1.5 text-slate-500 hover:text-brand-primary hover:bg-white rounded-lg transition-all shadow-sm shadow-transparent hover:shadow-slate-200"><ZoomOut size={16} /></button>
             <span className="text-[11px] font-black text-slate-700 w-10 text-center">{Math.round(scale * 100)}%</span>
@@ -256,129 +303,212 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
         </div>
 
         <div className="flex-1 overflow-auto bg-slate-800 p-4 lg:p-12 flex justify-center items-start scrollbar-hide" ref={containerRef}>
-          <Document
-            file={pdfFile}
-            onLoadSuccess={onDocumentLoadSuccess}
-            loading={
-              <div className="flex flex-col items-center justify-center p-20 text-white/50 bg-slate-900/50 rounded-3xl backdrop-blur-xl border border-white/10 shadow-2xl">
-                <Loader2 className="animate-spin mb-4" size={48} />
-                <p className="text-sm font-black uppercase tracking-widest">Initializing Editor...</p>
-              </div>
-            }
-            error={
-              <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl shadow-2xl border border-red-100 max-w-md my-20">
-                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-6">
-                  <X size={40} />
-                </div>
-                <h3 className="text-xl font-black text-slate-900 mb-3">Failed to load PDF</h3>
-                <p className="text-sm text-slate-500 text-center leading-relaxed mb-8">
-                  We couldn't open this file. Please ensure it's a valid PDF document and not an image file.
-                </p>
-                <button 
-                  onClick={onBack}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
-                >
-                  Go Back & Re-upload
-                </button>
-              </div>
-            }
-          >
-            <div 
+          {isImage ? (
+            <div
               className={cn(
                 "relative shadow-2xl bg-white origin-top-center transition-all duration-300 border border-slate-300",
                 pdfDimensions.width === 0 ? "opacity-0" : "opacity-100"
               )}
-              ref={pageRef} 
-              style={{ 
-                width: pdfDimensions.width * scale, 
+              ref={pageRef}
+              style={{
+                width: pdfDimensions.width * scale,
                 height: pdfDimensions.height * scale,
               }}
             >
-              <Page 
-                pageNumber={pageNumber} 
-                scale={scale} 
-                onLoadSuccess={onPageLoadSuccess}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageSrc}
+                alt="Document"
+                className="w-full h-full object-contain"
               />
 
               {/* Elements Overlay */}
               {pdfDimensions.width > 0 && elements.filter(el => el.page === pageNumber).map((el) => (
-              <Rnd
-                key={el.id}
-                bounds="parent"
-                position={{ x: el.x * scale, y: el.y * scale }}
-                size={el.type === 'signature' ? { width: el.width * scale, height: el.height * scale } : undefined}
-                enableResizing={el.type === 'signature'}
-                onDragStop={(e, d) => updateElement(el.id, { x: d.x / scale, y: d.y / scale })}
-                onResizeStop={(e, direction, ref, delta, position) => {
-                  updateElement(el.id, { 
-                    width: parseInt(ref.style.width) / scale, 
-                    height: parseInt(ref.style.height) / scale,
-                    x: position.x / scale,
-                    y: position.y / scale
-                  });
-                }}
-                lockAspectRatio={el.type === 'signature'}
-                onClick={() => setSelectedId(el.id)}
-                className={cn(
-                  "group border-2 transition-all cursor-move",
-                  selectedId === el.id ? "border-brand-primary shadow-xl ring-4 ring-brand-primary/10" : "border-transparent hover:border-brand-primary/30"
-                )}
-              >
-                {el.type === 'signature' ? (
-                  <div className="relative w-full h-full">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={signaturePreview}
-                      alt="Signature"
-                      className="w-full h-full object-contain pointer-events-none"
-                      style={{ opacity: el.opacity }}
-                    />
-                  </div>
-                ) : (
-                  <div className="relative p-1 min-w-[50px]">
-                    <input
-                      type="text"
-                      value={el.text}
-                      onChange={(e) => updateElement(el.id, { text: e.target.value })}
-                      className="bg-transparent border-none focus:outline-none focus:ring-0 w-full font-bold"
-                      style={{ 
-                        fontSize: `${el.fontSize * scale}px`, 
-                        color: el.color,
-                        fontFamily: 'Helvetica'
-                      }}
-                      autoFocus={selectedId === el.id}
-                    />
-                  </div>
-                )}
-                
-                {selectedId === el.id && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); removeElement(el.id); }}
-                    className="absolute -top-3 -right-3 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-50 border-2 border-white"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </Rnd>
-            ))}
+                <Rnd
+                  key={el.id}
+                  bounds="parent"
+                  position={{ x: el.x * scale, y: el.y * scale }}
+                  size={el.type === 'signature' ? { width: el.width * scale, height: el.height * scale } : undefined}
+                  enableResizing={el.type === 'signature'}
+                  onDragStop={(e, d) => updateElement(el.id, { x: d.x / scale, y: d.y / scale })}
+                  onResizeStop={(e, direction, ref, delta, position) => {
+                    updateElement(el.id, {
+                      width: parseInt(ref.style.width) / scale,
+                      height: parseInt(ref.style.height) / scale,
+                      x: position.x / scale,
+                      y: position.y / scale
+                    });
+                  }}
+                  lockAspectRatio={el.type === 'signature'}
+                  onClick={() => setSelectedId(el.id)}
+                  className={cn(
+                    "group border-2 transition-all cursor-move",
+                    selectedId === el.id ? "border-brand-primary shadow-xl ring-4 ring-brand-primary/10" : "border-transparent hover:border-brand-primary/30"
+                  )}
+                >
+                  {el.type === 'signature' ? (
+                    <div className="relative w-full h-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={signaturePreview}
+                        alt="Signature"
+                        className="w-full h-full object-contain pointer-events-none"
+                        style={{ opacity: el.opacity }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative p-1 min-w-[50px]">
+                      <input
+                        type="text"
+                        value={el.text}
+                        onChange={(e) => updateElement(el.id, { text: e.target.value })}
+                        className="bg-transparent border-none focus:outline-none focus:ring-0 w-full font-bold"
+                        style={{
+                          fontSize: `${el.fontSize * scale}px`,
+                          color: el.color,
+                          fontFamily: 'Helvetica'
+                        }}
+                        autoFocus={selectedId === el.id}
+                      />
+                    </div>
+                  )}
+
+                  {selectedId === el.id && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeElement(el.id); }}
+                      className="absolute -top-3 -right-3 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-50 border-2 border-white"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </Rnd>
+              ))}
             </div>
-          </Document>
+          ) : (
+            <Document
+              file={pdfFile}
+              onLoadSuccess={onDocumentLoadSuccess}
+              loading={
+                <div className="flex flex-col items-center justify-center p-20 text-white/50 bg-slate-900/50 rounded-3xl backdrop-blur-xl border border-white/10 shadow-2xl">
+                  <Loader2 className="animate-spin mb-4" size={48} />
+                  <p className="text-sm font-black uppercase tracking-widest">Initializing Editor...</p>
+                </div>
+              }
+              error={
+                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl shadow-2xl border border-red-100 max-w-md my-20">
+                  <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-6">
+                    <X size={40} />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 mb-3">Failed to load PDF</h3>
+                  <p className="text-sm text-slate-500 text-center leading-relaxed mb-8">
+                    We couldn't open this file. Please ensure it's a valid PDF document and not an image file.
+                  </p>
+                  <button
+                    onClick={onBack}
+                    className="w-full py-4 bg-slate-900 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
+                  >
+                    Go Back & Re-upload
+                  </button>
+                </div>
+              }
+            >
+              <div
+                className={cn(
+                  "relative shadow-2xl bg-white origin-top-center transition-all duration-300 border border-slate-300",
+                  pdfDimensions.width === 0 ? "opacity-0" : "opacity-100"
+                )}
+                ref={pageRef}
+                style={{
+                  width: pdfDimensions.width * scale,
+                  height: pdfDimensions.height * scale,
+                }}
+              >
+                <Page
+                  pageNumber={pageNumber}
+                  scale={scale}
+                  onLoadSuccess={onPageLoadSuccess}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                />
+
+                {/* Elements Overlay */}
+                {pdfDimensions.width > 0 && elements.filter(el => el.page === pageNumber).map((el) => (
+                  <Rnd
+                    key={el.id}
+                    bounds="parent"
+                    position={{ x: el.x * scale, y: el.y * scale }}
+                    size={el.type === 'signature' ? { width: el.width * scale, height: el.height * scale } : undefined}
+                    enableResizing={el.type === 'signature'}
+                    onDragStop={(e, d) => updateElement(el.id, { x: d.x / scale, y: d.y / scale })}
+                    onResizeStop={(e, direction, ref, delta, position) => {
+                      updateElement(el.id, {
+                        width: parseInt(ref.style.width) / scale,
+                        height: parseInt(ref.style.height) / scale,
+                        x: position.x / scale,
+                        y: position.y / scale
+                      });
+                    }}
+                    lockAspectRatio={el.type === 'signature'}
+                    onClick={() => setSelectedId(el.id)}
+                    className={cn(
+                      "group border-2 transition-all cursor-move",
+                      selectedId === el.id ? "border-brand-primary shadow-xl ring-4 ring-brand-primary/10" : "border-transparent hover:border-brand-primary/30"
+                    )}
+                  >
+                    {el.type === 'signature' ? (
+                      <div className="relative w-full h-full">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={signaturePreview}
+                          alt="Signature"
+                          className="w-full h-full object-contain pointer-events-none"
+                          style={{ opacity: el.opacity }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="relative p-1 min-w-[50px]">
+                        <input
+                          type="text"
+                          value={el.text}
+                          onChange={(e) => updateElement(el.id, { text: e.target.value })}
+                          className="bg-transparent border-none focus:outline-none focus:ring-0 w-full font-bold"
+                          style={{
+                            fontSize: `${el.fontSize * scale}px`,
+                            color: el.color,
+                            fontFamily: 'Helvetica'
+                          }}
+                          autoFocus={selectedId === el.id}
+                        />
+                      </div>
+                    )}
+
+                    {selectedId === el.id && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeElement(el.id); }}
+                        className="absolute -top-3 -right-3 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-50 border-2 border-white"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </Rnd>
+                ))}
+              </div>
+            </Document>
+          )}
         </div>
 
         {/* Page navigation */}
         <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-white">
           <div className="flex gap-1.5">
-            <button 
-              disabled={pageNumber <= 1} 
+            <button
+              disabled={pageNumber <= 1}
               onClick={() => setPageNumber(p => p - 1)}
               className="p-2 text-slate-500 hover:text-brand-primary hover:bg-slate-100 rounded-xl disabled:opacity-30 transition-all"
             >
               <ArrowLeft size={18} />
             </button>
-            <button 
-              disabled={pageNumber >= numPages} 
+            <button
+              disabled={pageNumber >= numPages}
               onClick={() => setPageNumber(p => p + 1)}
               className="p-2 text-slate-500 hover:text-brand-primary hover:bg-slate-100 rounded-xl disabled:opacity-30 transition-all"
             >
@@ -387,9 +517,9 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
           </div>
 
           <div className="flex-1 flex justify-center">
-             <div className="bg-slate-100 px-5 py-1.5 rounded-full border border-slate-200">
-               <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Page {pageNumber} / {numPages}</span>
-             </div>
+            <div className="bg-slate-100 px-5 py-1.5 rounded-full border border-slate-200">
+              <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Page {pageNumber} / {numPages}</span>
+            </div>
           </div>
 
           <button
@@ -406,11 +536,11 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
       {/* Element Properties Sidebar */}
       <AnimatePresence>
         {selectedElement && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="w-full lg:w-72 bg-white border border-slate-200 rounded-[2rem] p-6 shadow-xl shadow-slate-200/50"
+            className="w-full lg:w-72 bg-white border border-slate-200 rounded-4xl p-6 shadow-xl shadow-slate-200/50"
           >
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2 text-slate-900">
@@ -429,10 +559,10 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
                 <>
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Opacity</label>
-                    <input 
-                      type="range" 
+                    <input
+                      type="range"
                       min="0.1" max="1" step="0.1"
-                      value={selectedElement.opacity} 
+                      value={selectedElement.opacity}
                       onChange={(e) => updateElement(selectedElement.id, { opacity: parseFloat(e.target.value) })}
                       className="w-full accent-brand-primary"
                     />
@@ -455,10 +585,10 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
                 <>
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Font Size</label>
-                    <input 
-                      type="range" 
-                      min="8" max="72" 
-                      value={selectedElement.fontSize} 
+                    <input
+                      type="range"
+                      min="8" max="72"
+                      value={selectedElement.fontSize}
                       onChange={(e) => updateElement(selectedElement.id, { fontSize: parseInt(e.target.value) })}
                       className="w-full accent-brand-primary"
                     />
@@ -488,7 +618,7 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
               )}
 
               <div className="pt-6 mt-2 border-t border-slate-100">
-                <button 
+                <button
                   onClick={() => removeElement(selectedElement.id)}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
                 >

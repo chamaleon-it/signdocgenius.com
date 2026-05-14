@@ -29,14 +29,14 @@ export default function Hero() {
           <h1 className="text-6xl md:text-7xl font-black text-slate-900 leading-[1.1] mb-8 tracking-tight">
             The way the world <span className="text-brand-primary">agrees</span>.
           </h1>
-          
+
           <p className="text-xl text-slate-600 leading-relaxed mb-10 max-w-xl">
             Streamline your business with the world's #1 way to sign and manage agreements. Secure, legally binding, and stunningly simple.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
-            <Link 
-              href="/sign" 
+            <Link
+              href="/sign"
               className="flex items-center justify-center gap-2 px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold text-lg shadow-2xl shadow-brand-primary/30 hover:bg-brand-hover hover:-translate-y-1 active:translate-y-0 transition-all"
             >
               Get Started Free <ArrowRight size={20} />
@@ -59,35 +59,35 @@ export default function Hero() {
           className="relative"
         >
           <div className="relative z-10 glass p-4 rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(67,0,152,0.15)]">
-             <div className="bg-slate-900 rounded-[2rem] overflow-hidden aspect-[4/3] relative">
-                {/* Mockup Content */}
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 p-8">
-                  <div className="h-full border-2 border-dashed border-slate-700 rounded-xl flex items-center justify-center">
-                     <div className="text-center">
-                        <div className="w-16 h-16 bg-brand-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                           <ArrowRight className="text-brand-primary rotate-45" size={32} />
-                        </div>
-                        <p className="text-slate-400 font-medium">Drag & Drop Documents Here</p>
-                     </div>
+            <div className="bg-slate-900 rounded-4xl overflow-hidden aspect-4/3 relative">
+              {/* Mockup Content */}
+              <div className="absolute inset-0 bg-linear-to-br from-slate-800 to-slate-900 p-8">
+                <div className="h-full border-2 border-dashed border-slate-700 rounded-xl flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-brand-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <ArrowRight className="text-brand-primary rotate-45" size={32} />
+                    </div>
+                    <p className="text-slate-400 font-medium">Drag & Drop Documents Here</p>
                   </div>
                 </div>
-                {/* Floating Elements */}
-                <motion.div 
-                  animate={{ y: [0, -10, 0] }} 
-                  transition={{ duration: 4, repeat: Infinity }}
-                  className="absolute top-10 right-10 glass-dark p-4 rounded-2xl border border-white/10"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <CheckCircle2 className="text-white" size={16} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">Status</p>
-                      <p className="text-sm text-white font-bold tracking-tight">Signed Successfully</p>
-                    </div>
+              </div>
+              {/* Floating Elements */}
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity }}
+                className="absolute top-10 right-10 glass-dark p-4 rounded-2xl border border-white/10"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="text-white" size={16} />
                   </div>
-                </motion.div>
-             </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Status</p>
+                    <p className="text-sm text-white font-bold tracking-tight">Signed Successfully</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           </div>
           {/* Decorative Elements */}
           <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-brand-light rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" />
