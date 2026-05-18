@@ -19,7 +19,7 @@ export function Navbar() {
   }, []);
 
   return (
-    <nav 
+    <nav
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 py-4",
         isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm py-3" : "bg-transparent"
@@ -35,23 +35,23 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
+        {/* <div className="hidden md:flex items-center gap-8">
           <NavLink href="/solutions">Solutions <ChevronDown size={14} className="ml-1" /></NavLink>
           <NavLink href="/pricing">Pricing</NavLink>
           <NavLink href="/resources">Resources</NavLink>
           <NavLink href="/support">Support</NavLink>
-        </div>
+        </div> */}
 
         {/* Auth Actions */}
         <div className="hidden md:flex items-center gap-4">
-          <Link 
+          {/* <Link 
             href="/login" 
             className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-brand-primary transition-colors"
           >
             Log In
-          </Link>
-          <Link 
-            href="/sign" 
+          </Link> */}
+          <Link
+            href="/sign"
             className="px-6 py-2.5 bg-brand-primary text-white rounded-full text-sm font-bold shadow-lg shadow-brand-primary/20 hover:bg-brand-hover hover:scale-105 active:scale-95 transition-all"
           >
             Get Started
@@ -59,7 +59,7 @@ export function Navbar() {
         </div>
 
         {/* Mobile Menu Button */}
-        <button 
+        <button
           className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
@@ -69,18 +69,18 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="md:hidden absolute top-full left-0 right-0 bg-white border-b border-slate-100 p-6 shadow-xl"
         >
           <div className="flex flex-col gap-4">
-            <Link href="/solutions" className="text-lg font-medium text-slate-900">Solutions</Link>
+            {/* <Link href="/solutions" className="text-lg font-medium text-slate-900">Solutions</Link>
             <Link href="/pricing" className="text-lg font-medium text-slate-900">Pricing</Link>
             <Link href="/resources" className="text-lg font-medium text-slate-900">Resources</Link>
             <Link href="/support" className="text-lg font-medium text-slate-900">Support</Link>
             <div className="h-px bg-slate-100 my-2" />
-            <Link href="/login" className="text-lg font-medium text-slate-600">Log In</Link>
+            <Link href="/login" className="text-lg font-medium text-slate-600">Log In</Link> */}
             <Link href="/sign" className="w-full py-3 bg-brand-primary text-white text-center rounded-xl font-bold shadow-lg shadow-brand-primary/20">Get Started</Link>
           </div>
         </motion.div>
@@ -91,8 +91,8 @@ export function Navbar() {
 
 function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link 
-      href={href} 
+    <Link
+      href={href}
       className="flex items-center text-sm font-semibold text-slate-600 hover:text-brand-primary transition-colors relative group"
     >
       {children}

@@ -41,9 +41,7 @@ export default function Hero() {
             >
               Get Started Free <ArrowRight size={20} />
             </Link>
-            <button className="flex items-center justify-center gap-2 px-8 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl font-bold text-lg hover:bg-slate-50 hover:border-slate-300 transition-all">
-              <Play size={20} fill="currentColor" /> Watch Demo
-            </button>
+
           </div>
 
           <div className="flex flex-wrap gap-6 text-sm text-slate-500 font-medium">
