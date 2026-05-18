@@ -5,9 +5,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { UserDetailsForm, UserDetails } from './components/UserDetailsForm';
 import { UploadPdf } from './components/UploadPdf';
 import { UploadSignature } from './components/UploadSignature';
-import { PdfEditor } from './components/PdfEditor';
+import dynamic from 'next/dynamic';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const PdfEditor = dynamic(
+  () => import('./components/PdfEditor').then(mod => mod.PdfEditor),
+  { ssr: false }
+);
 
 export default function SignPage() {
   const [step, setStep] = useState<number>(1);
