@@ -8,7 +8,7 @@ const secretKey = new TextEncoder().encode(JWT_SECRET);
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get('admin_token')?.value;
 
-  if (request.nextUrl.pathname.startsWith('/admin/dashboard')) {
+  if (request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login')) {
     if (!token) {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
@@ -24,5 +24,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/dashboard/:path*'],
+  matcher: ['/admin/:path*'],
 };

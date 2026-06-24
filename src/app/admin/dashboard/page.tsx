@@ -1,214 +1,176 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Upload, Link as LinkIcon, FileText, CheckCircle, ExternalLink, Copy, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { FileText, Activity, CheckCircle, Clock, Users, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
-type Document = {
-  _id: string;
-  title: string;
-  fileUrl: string;
-  createdAt: string;
+type AnalyticsData = {
+  totalDocuments: number;
+  totalApplications: number;
+  signedApplications: number;
+  recentApplications: any[];
 };
 
-type Application = {
-  _id: string;
-  documentId: Document;
-  clientName: string;
-  clientEmail: string;
-  signedFileUrl: string;
-  status: string;
-  createdAt: string;
-};
-
-export default function DashboardPage() {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
+export default function DashboardOverview() {
+  const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Upload state
-  const [title, setTitle] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
+    fetch('/api/admin/analytics')
+      .then(res => res.json())
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const res = await fetch('/api/admin/documents');
-      const data = await res.json();
-      if (data.documents) setDocuments(data.documents);
-      if (data.applications) setApplications(data.applications);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file || !title) return;
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('file', file);
-
-    try {
-      const res = await fetch('/api/admin/documents', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (res.ok) {
-        setTitle('');
-        setFile(null);
-        fetchData(); // Refresh lists
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const copyLink = (id: string) => {
-    const link = `${window.location.origin}/sign/${id}`;
-    navigator.clipboard.writeText(link);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  if (loading) return <div className="p-8">Loading dashboard...</div>;
+  const stats = [
+    {
+      title: 'Total Documents',
+      value: data?.totalDocuments || 0,
+      icon: FileText,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+      border: 'border-blue-100',
+    },
+    {
+      title: 'Total Submissions',
+      value: data?.totalApplications || 0,
+      icon: Users,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+      border: 'border-purple-100',
+    },
+    {
+      title: 'Signed Documents',
+      value: data?.signedApplications || 0,
+      icon: CheckCircle,
+      color: 'text-green-600',
+      bg: 'bg-green-50',
+      border: 'border-green-100',
+    },
+    {
+      title: 'Pending Signatures',
+      value: Math.max(0, (data?.totalApplications || 0) - (data?.signedApplications || 0)),
+      icon: Clock,
+      color: 'text-orange-600',
+      bg: 'bg-orange-50',
+      border: 'border-orange-100',
+    },
+  ];
 
   return (
     <div className="space-y-8">
+      {/* Header section */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500">Manage your documents and client applications.</p>
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-3xl font-black text-slate-900 tracking-tight"
+        >
+          Welcome back, Admin
+        </motion.h1>
+        <motion.p 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-slate-500 mt-2 text-lg"
+        >
+          Here's what's happening with your documents today.
+        </motion.p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Upload Section */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Upload className="w-5 h-5 text-brand-primary" />
-              Upload Document
-            </h2>
-            <form onSubmit={handleUpload} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Document Title</label>
-                <input 
-                  type="text" 
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none"
-                  placeholder="e.g. NDA Agreement"
-                  required
-                />
+      {/* Analytics Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <motion.div
+            key={stat.title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className={`p-6 rounded-3xl bg-white border ${stat.border} shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group`}
+          >
+            {/* Background decoration */}
+            <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${stat.bg} opacity-50 group-hover:scale-150 transition-transform duration-500`} />
+            
+            <div className="relative z-10 flex items-start justify-between mb-4">
+              <div className={`w-12 h-12 rounded-2xl ${stat.bg} flex items-center justify-center`}>
+                <stat.icon className={`w-6 h-6 ${stat.color}`} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">PDF File</label>
-                <input 
-                  type="file" 
-                  accept=".pdf"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20 cursor-pointer"
-                  required
-                />
-              </div>
-              <button 
-                type="submit" 
-                disabled={uploading || !file || !title}
-                className="w-full bg-brand-primary text-white py-2 rounded-lg font-medium hover:bg-brand-primary/90 transition-colors disabled:opacity-50"
-              >
-                {uploading ? 'Uploading...' : 'Upload PDF'}
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Lists Section */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* Documents List */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-brand-primary" />
-              Your Documents
-            </h2>
-            {documents.length === 0 ? (
-              <p className="text-slate-500 text-sm">No documents uploaded yet.</p>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {documents.map((doc) => (
-                  <div key={doc._id} className="py-4 flex items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-medium text-slate-900">{doc.title}</h3>
-                      <p className="text-xs text-slate-500">{new Date(doc.createdAt).toLocaleDateString()}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <a 
-                        href={doc.fileUrl} 
-                        target="_blank" 
-                        className="p-2 text-slate-500 hover:text-brand-primary hover:bg-brand-primary/10 rounded-lg transition-colors"
-                        title="View Original PDF"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                      <button 
-                        onClick={() => copyLink(doc._id)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        {copiedId === doc._id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                        {copiedId === doc._id ? 'Copied' : 'Copy Link'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Applications List */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              Completed Applications
-            </h2>
-            {applications.length === 0 ? (
-              <p className="text-slate-500 text-sm">No completed applications yet.</p>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {applications.map((app) => (
-                  <div key={app._id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-medium text-slate-900">{app.clientName}</h3>
-                      <p className="text-sm text-slate-500">{app.clientEmail}</p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Signed: {app.documentId?.title || 'Unknown Doc'} • {new Date(app.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <a 
-                      href={app.signedFileUrl} 
-                      target="_blank" 
-                      className="px-4 py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary/90 transition-colors whitespace-nowrap text-center"
-                    >
-                      View Signed PDF
-                    </a>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-        </div>
+            </div>
+            
+            <div className="relative z-10">
+              <h3 className="text-3xl font-black text-slate-900 mb-1">{stat.value}</h3>
+              <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{stat.title}</p>
+            </div>
+          </motion.div>
+        ))}
       </div>
+
+      {/* Recent Activity Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden"
+      >
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Recent Applications</h2>
+            <p className="text-sm text-slate-500 mt-1">The latest documents signed by your clients.</p>
+          </div>
+          <Link 
+            href="/admin/applications"
+            className="flex items-center gap-2 text-sm font-semibold text-brand-primary hover:text-brand-hover bg-brand-primary/10 hover:bg-brand-primary/20 px-4 py-2 rounded-xl transition-colors"
+          >
+            View All <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="divide-y divide-slate-100">
+          {!data?.recentApplications || data.recentApplications.length === 0 ? (
+            <div className="p-12 text-center text-slate-500 font-medium">
+              No recent applications found.
+            </div>
+          ) : (
+            data.recentApplications.map((app) => (
+              <div key={app._id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                    <Activity className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">{app.clientName}</h3>
+                    <p className="text-sm text-slate-500 mb-1">{app.clientEmail}</p>
+                    <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+                      <FileText className="w-3.5 h-3.5" />
+                      {app.documentId?.title || 'Unknown Document'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-end gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Signed
+                  </span>
+                  <span className="text-xs font-medium text-slate-400">
+                    {new Date(app.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }
