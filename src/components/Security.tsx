@@ -18,7 +18,7 @@ export default function Security() {
         </div>
         <div className={styles.contentColumn}>
           <h2 className={styles.title}>
-            Docusign meets or exceeds stringent global security standards
+            SignDocGenius meets or exceeds stringent global security standards
           </h2>
           <ul className={styles.list}>
             <li className={styles.listItem}>

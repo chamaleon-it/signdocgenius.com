@@ -35,10 +35,11 @@ export default function AdminLayout({
       <div className="w-72 bg-white border-r border-slate-200 flex-col hidden md:flex relative overflow-hidden shadow-sm">
         <div className="p-8 pb-6 relative z-10 border-b border-slate-100">
           <Link href="/admin/dashboard" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary group-hover:bg-brand-primary group-hover:text-white transition-colors duration-300">
-              <FileText className="w-5 h-5" />
-            </div>
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">SignGenius</span>
+            <img 
+              src="/images/logo.png" 
+              alt="SignDocGenius Logo" 
+              className="h-10 w-auto object-contain" 
+            />
           </Link>
         </div>
 
@@ -95,10 +96,11 @@ export default function AdminLayout({
         {/* Mobile Header */}
         <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 p-4 flex items-center justify-between md:hidden sticky top-0 z-50">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-brand-primary to-purple-600 rounded-lg flex items-center justify-center text-white">
-              <FileText className="w-4 h-4" />
-            </div>
-            <h2 className="text-lg font-bold text-slate-900">SignGenius</h2>
+            <img 
+              src="/images/logo.png" 
+              alt="SignDocGenius Logo" 
+              className="h-8 w-auto object-contain" 
+            />
           </div>
           <button onClick={handleLogout} className="p-2 text-slate-500 hover:text-red-500 transition-colors">
             <LogOut className="w-5 h-5" />

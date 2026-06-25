@@ -7,8 +7,11 @@ export default function Header() {
       <div className={styles.container}>
         <div className={styles.left}>
           <Link href="/" className={styles.logo}>
-            <span className={styles.logoIcon}></span>
-            <span className={styles.logoText}>Docusign</span>
+            <img 
+              src="/images/logo.png" 
+              alt="SignDocGenius Logo" 
+              style={{ height: '32px', width: 'auto', objectFit: 'contain' }} 
+            />
           </Link>
           <nav className={styles.nav}>
             <Link href="#" className={styles.navLink}>Products</Link>

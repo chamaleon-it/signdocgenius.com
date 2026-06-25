@@ -54,7 +54,7 @@ export default function Features() {
             viewport={{ once: true }}
             className="text-4xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight"
           >
-            Go <span className="text-brand-primary">paperless</span> with DocuSign
+            Go <span className="text-brand-primary">paperless</span> with SignDocGenius
           </motion.h2>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Everything you need to sign, send, and manage agreements in one secure, unified platform.

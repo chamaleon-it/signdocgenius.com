@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Docusign | eSignature & Agreement Cloud",
-  description: "Docusign meets or exceeds stringent global security standards",
+  title: "SignDocGenius | eSignature & Agreement Cloud",
+  description: "SignDocGenius meets or exceeds stringent global security standards",
 };
 
 import { ConditionalHeader, ConditionalFooter, ConditionalMain } from "@/components/ConditionalLayout";
