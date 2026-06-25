@@ -27,11 +27,15 @@ export function Footer() {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-12 mb-16">
           <div className="col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center">
-                <Shield className="text-white" size={20} />
+            <Link href="/" className="flex items-center gap-2.5 mb-6 group">
+              <div className="w-8 h-8 bg-[#1e00ff] rounded-lg flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-300">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white" fillOpacity="0.8"/>
+                  <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
-              <span className="text-xl font-bold tracking-tight text-white">DocuSign</span>
+              <span className="text-xl font-bold tracking-tight text-white group-hover:text-slate-300 transition-colors duration-300" style={{ letterSpacing: '-0.03em' }}>SignDocGenius</span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed mb-6">
               Docusign helps organizations connect and automate how they prepare, sign, act on, and manage agreements.

@@ -4,12 +4,13 @@ import { Document } from '@/models/Document';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
-    // Wait for params in Next.js 15+ 
-    const id = await Promise.resolve(params.id);
+    // Await params first in Next.js 15+ 
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
     const document = await Document.findById(id);
 
     if (!document) {

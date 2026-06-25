@@ -27,11 +27,15 @@ export function Navbar() {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center shadow-lg shadow-brand-primary/20 group-hover:scale-110 transition-transform">
-            <Shield className="text-white" size={24} />
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="w-9 h-9 bg-[#1e00ff] rounded-lg flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-300">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white" fillOpacity="0.8"/>
+              <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
-          <span className="text-xl font-bold tracking-tight text-slate-900">DocuSign</span>
+          <span className="text-2xl font-bold tracking-tight text-slate-900 group-hover:text-[#1e00ff] transition-colors duration-300" style={{ letterSpacing: '-0.03em' }}>SignDocGenius</span>
         </Link>
 
         {/* Desktop Navigation */}
