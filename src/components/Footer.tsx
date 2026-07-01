@@ -27,14 +27,15 @@ export function Footer() {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-12 mb-16">
           <div className="col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center">
-                <Shield className="text-white" size={20} />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-white">DocuSign</span>
+            <Link href="/" className="flex items-center gap-2 mb-6 group">
+              <img 
+                src="/images/logo.png" 
+                alt="SignDocGenius Logo" 
+                className="h-8 w-auto object-contain bg-white px-2 py-1 rounded shadow-sm group-hover:opacity-80 transition-opacity" 
+              />
             </Link>
             <p className="max-w-xs text-sm leading-relaxed mb-6">
-              Docusign helps organizations connect and automate how they prepare, sign, act on, and manage agreements.
+              SignDocGenius helps organizations connect and automate how they prepare, sign, act on, and manage agreements.
             </p>
             <div className="flex gap-4">
               <SocialIcon icon={<Mail size={18} />} />
@@ -58,7 +59,7 @@ export function Footer() {
         </div>
         
         <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-xs">© 2026 DocuSign, Inc. All rights reserved.</p>
+          <p className="text-xs">© 2026 SignDocGenius, Inc. All rights reserved.</p>
           <div className="flex gap-8 text-xs font-medium">
             <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="#" className="hover:text-white transition-colors">Terms of Use</Link>

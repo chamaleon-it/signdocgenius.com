@@ -30,7 +30,7 @@ export default function CTA() {
             </h2>
             
             <p className="text-xl text-white/80 mb-12 font-medium leading-relaxed">
-              Join millions of users who are saving time, reducing costs, and delighting their customers with DocuSign.
+              Join millions of users who are saving time, reducing costs, and delighting their customers with SignDocGenius.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center">

@@ -10,9 +10,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Docusign | eSignature & Agreement Cloud",
-  description: "Docusign meets or exceeds stringent global security standards",
+  title: "SignDocGenius | eSignature & Agreement Cloud",
+  description: "SignDocGenius meets or exceeds stringent global security standards",
 };
+
+import { ConditionalHeader, ConditionalFooter, ConditionalMain } from "@/components/ConditionalLayout";
 
 export default function RootLayout({
   children,
@@ -22,11 +24,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable}`}>
       <body className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 pt-24 pb-12">
+        <ConditionalHeader />
+        <ConditionalMain>
           {children}
-        </main>
-        <Footer />
+        </ConditionalMain>
+        <ConditionalFooter />
       </body>
     </html>
   );

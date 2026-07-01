@@ -21,7 +21,7 @@ if (typeof window !== 'undefined' && !window.DOMMatrix) {
 }
 
 // Set up the worker for react-pdf
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.4.296/build/pdf.worker.min.mjs`;
 
 interface ElementBase {
   id: string;
@@ -52,9 +52,10 @@ interface PdfEditorProps {
   signatureFile: File;
   signaturePreview: string;
   onBack: () => void;
+  onSave?: (blob: Blob) => void;
 }
 
-export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps) {
+export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEditorProps) {
   const [numPages, setNumPages] = useState<number>(1);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -231,6 +232,12 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
 
       const pdfBytesModified = await pdfDoc.save();
       const blob = new Blob([pdfBytesModified as any], { type: 'application/pdf' });
+      
+      if (onSave) {
+        onSave(blob);
+        return;
+      }
+
       const url = URL.createObjectURL(blob);
 
       const link = document.createElement('a');
@@ -528,7 +535,7 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack }: PdfEditorProps)
             className="flex items-center justify-center py-3 px-6 rounded-xl shadow-lg shadow-brand-primary/20 text-xs font-black text-white bg-brand-primary hover:bg-brand-hover disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed transition-all"
           >
             {isExporting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download className="mr-2" size={16} />}
-            {isExporting ? 'Exporting...' : 'Finish & Download'}
+            {isExporting ? 'Processing...' : (onSave ? 'Submit Document' : 'Finish & Download')}
           </button>
         </div>
       </div>
