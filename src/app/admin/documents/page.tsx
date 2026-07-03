@@ -58,9 +58,13 @@ export default function DocumentsPage() {
         setFile(null);
         setShowUpload(false);
         fetchData();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Upload failed: ${errorData.error || res.statusText || 'File may exceed size limit'}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(`Upload error: ${err.message || 'Network or size limit error'}`);
     } finally {
       setUploading(false);
     }
