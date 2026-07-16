@@ -32,6 +32,8 @@ interface ElementBase {
 
 interface SignatureElement extends ElementBase {
   type: 'signature';
+  signatureId?: string;
+  signatureUrl?: string;
   width: number;
   height: number;
   rotation: number;
@@ -47,20 +49,42 @@ interface TextElement extends ElementBase {
 
 type EditorElement = SignatureElement | TextElement;
 
+export interface SignatureItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  label?: string;
+}
+
 interface PdfEditorProps {
   pdfFile: File;
-  signatureFile: File;
-  signaturePreview: string;
+  signatures?: SignatureItem[];
+  signatureFile?: File;
+  signaturePreview?: string;
   onBack: () => void;
   onSave?: (blob: Blob) => void;
 }
 
-export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEditorProps) {
+export function PdfEditor({ pdfFile, signatures, signaturePreview, signatureFile, onBack, onSave }: PdfEditorProps) {
+  const activeSignatures: SignatureItem[] = React.useMemo(() => {
+    if (signatures && signatures.length > 0) return signatures;
+    if (signaturePreview) {
+      return [{
+        id: 'default-sig',
+        file: signatureFile || new File([], 'sig.png'),
+        previewUrl: signaturePreview,
+        label: 'Signature 1'
+      }];
+    }
+    return [];
+  }, [signatures, signaturePreview, signatureFile]);
+
   const [numPages, setNumPages] = useState<number>(1);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [elements, setElements] = useState<EditorElement[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showSigPicker, setShowSigPicker] = useState<boolean>(false);
 
   const [isExporting, setIsExporting] = useState(false);
   const [pdfDimensions, setPdfDimensions] = useState({ width: 0, height: 0 });
@@ -101,10 +125,12 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
     });
   };
 
-  const addSignature = () => {
+  const addSignatureItem = (sig: SignatureItem) => {
     const newSig: SignatureElement = {
-      id: `sig-${Date.now()}`,
+      id: `sig-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       type: 'signature',
+      signatureId: sig.id,
+      signatureUrl: sig.previewUrl,
       x: 50,
       y: 50,
       width: 150,
@@ -115,6 +141,15 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
     };
     setElements([...elements, newSig]);
     setSelectedId(newSig.id);
+  };
+
+  const addSignature = () => {
+    if (activeSignatures.length === 0) return;
+    if (activeSignatures.length > 1) {
+      setShowSigPicker(true);
+    } else {
+      addSignatureItem(activeSignatures[0]);
+    }
   };
 
   const addText = () => {
@@ -174,17 +209,29 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
 
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-      const sigResponse = await fetch(signaturePreview);
-      const sigBytes = await sigResponse.arrayBuffer();
-      let signatureImage;
-      try {
-        if (signaturePreview.includes('png') || signaturePreview.startsWith('data:image/png')) {
-          signatureImage = await pdfDoc.embedPng(sigBytes);
-        } else {
-          signatureImage = await pdfDoc.embedJpg(sigBytes);
+      const embeddedSignatures: Record<string, any> = {};
+      for (const sig of activeSignatures) {
+        try {
+          const sigResponse = await fetch(sig.previewUrl);
+          const sigBytes = await sigResponse.arrayBuffer();
+          let embeddedImg;
+          try {
+            if (sig.previewUrl.includes('png') || sig.previewUrl.startsWith('data:image/png')) {
+              embeddedImg = await pdfDoc.embedPng(sigBytes);
+            } else {
+              embeddedImg = await pdfDoc.embedJpg(sigBytes);
+            }
+          } catch (e) {
+            try {
+              embeddedImg = await pdfDoc.embedPng(sigBytes);
+            } catch (e2) {
+              embeddedImg = await pdfDoc.embedJpg(sigBytes);
+            }
+          }
+          embeddedSignatures[sig.id] = embeddedImg;
+        } catch (err) {
+          console.error('Error embedding signature:', sig.id, err);
         }
-      } catch (e) {
-        signatureImage = await pdfDoc.embedPng(sigBytes);
       }
 
       const pages = pdfDoc.getPages();
@@ -199,12 +246,15 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
         const ratioY = pdfHeight / pdfDimensions.height;
 
         if (el.type === 'signature') {
+          const embeddedImg = (el.signatureId && embeddedSignatures[el.signatureId]) || Object.values(embeddedSignatures)[0];
+          if (!embeddedImg) continue;
+
           const finalWidth = el.width * ratioX;
           const finalHeight = el.height * ratioY;
           const finalX = el.x * ratioX;
           const finalY = pdfHeight - ((el.y + el.height) * ratioY);
 
-          activePage.drawImage(signatureImage, {
+          activePage.drawImage(embeddedImg, {
             x: finalX,
             y: finalY,
             width: finalWidth,
@@ -357,7 +407,7 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
                     <div className="relative w-full h-full">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={signaturePreview}
+                        src={el.signatureUrl || activeSignatures[0]?.previewUrl || signaturePreview}
                         alt="Signature"
                         className="w-full h-full object-contain pointer-events-none"
                         style={{ opacity: el.opacity }}
@@ -466,7 +516,7 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
                       <div className="relative w-full h-full">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={signaturePreview}
+                          src={el.signatureUrl || activeSignatures[0]?.previewUrl || signaturePreview}
                           alt="Signature"
                           className="w-full h-full object-contain pointer-events-none"
                           style={{ opacity: el.opacity }}
@@ -564,6 +614,28 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
             <div className="space-y-6">
               {selectedElement.type === 'signature' ? (
                 <>
+                  {activeSignatures.length > 1 && (
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Selected Signer</label>
+                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {activeSignatures.map((sig, idx) => (
+                          <button
+                            key={sig.id}
+                            onClick={() => updateElement(selectedElement.id, { signatureId: sig.id, signatureUrl: sig.previewUrl })}
+                            className={cn(
+                              "flex items-center gap-2.5 p-2 rounded-xl border text-left transition-all",
+                              (selectedElement as SignatureElement).signatureId === sig.id ? "border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary/20" : "border-slate-100 hover:border-slate-200"
+                            )}
+                          >
+                            <div className="w-12 h-8 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-center p-1 shrink-0">
+                              <img src={sig.previewUrl} alt={sig.label || `Signature ${idx + 1}`} className="max-w-full max-h-full object-contain" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-800 truncate flex-1">{sig.label || `Signer #${idx + 1}`}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Opacity</label>
                     <input
@@ -634,6 +706,53 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
                 </button>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Signature Picker Modal for Multiple Signers */}
+      <AnimatePresence>
+        {showSigPicker && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-4xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-black text-slate-900 text-lg">Select Signature to Place</h3>
+                <button onClick={() => setShowSigPicker(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-xl hover:bg-slate-100 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mb-6">Choose which person&apos;s signature you want to add to this page:</p>
+              <div className="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto pr-1">
+                {activeSignatures.map((sig, idx) => (
+                  <button
+                    key={sig.id}
+                    onClick={() => { addSignatureItem(sig); setShowSigPicker(false); }}
+                    className="flex items-center gap-4 p-3.5 rounded-2xl border border-slate-200 hover:border-brand-primary hover:bg-brand-primary/5 transition-all text-left group shadow-sm"
+                  >
+                    <div className="w-16 h-12 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center p-1.5 shrink-0">
+                      <img src={sig.previewUrl} alt={sig.label || `Signature ${idx + 1}`} className="max-w-full max-h-full object-contain" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-900 text-sm truncate group-hover:text-brand-primary transition-colors">{sig.label || `Signer #${idx + 1}`}</p>
+                      <p className="text-[10px] text-slate-400 font-medium">Click to place on Page {pageNumber}</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-brand-primary group-hover:text-white flex items-center justify-center transition-colors text-slate-400 shrink-0">
+                      <Plus size={16} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

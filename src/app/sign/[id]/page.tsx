@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { UserDetailsForm, UserDetails } from '../components/UserDetailsForm';
-import { UploadSignature } from '../components/UploadSignature';
+import { UploadSignature, SignatureItem } from '../components/UploadSignature';
 import dynamic from 'next/dynamic';
 import { Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,7 @@ export default function DynamicSignPage() {
   const [document, setDocument] = useState<{ _id: string, title: string, fileUrl: string } | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | undefined>();
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [signatures, setSignatures] = useState<SignatureItem[]>([]);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
 
@@ -69,9 +70,12 @@ export default function DynamicSignPage() {
     setStep(2);
   };
 
-  const handleNextStep2 = (file: File, preview: string) => {
-    setSignatureFile(file);
-    setSignaturePreview(preview);
+  const handleNextStep2 = (sigs: SignatureItem[]) => {
+    setSignatures(sigs);
+    if (sigs.length > 0) {
+      setSignatureFile(sigs[0].file);
+      setSignaturePreview(sigs[0].previewUrl);
+    }
     setStep(3);
   };
 
@@ -225,11 +229,12 @@ export default function DynamicSignPage() {
                 key="step2" 
                 onNext={handleNextStep2} 
                 onBack={goBack} 
+                initialSignatures={signatures}
                 initialFile={signatureFile}
                 initialPreview={signaturePreview}
               />
             )}
-            {step === 3 && pdfFile && signatureFile && signaturePreview && (
+            {step === 3 && pdfFile && signatures.length > 0 && (
               <motion.div
                 key="step3"
                 initial={{ opacity: 0, scale: 0.98 }}
@@ -239,8 +244,9 @@ export default function DynamicSignPage() {
               >
                 <PdfEditor 
                   pdfFile={pdfFile}
-                  signatureFile={signatureFile}
-                  signaturePreview={signaturePreview}
+                  signatures={signatures}
+                  signatureFile={signatures[0]?.file || signatureFile || new File([], 'sig.png')}
+                  signaturePreview={signatures[0]?.previewUrl || signaturePreview || ''}
                   onBack={goBack}
                   onSave={handleSave}
                 />

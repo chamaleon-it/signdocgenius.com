@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { UserDetailsForm, UserDetails } from './components/UserDetailsForm';
 import { UploadPdf } from './components/UploadPdf';
-import { UploadSignature } from './components/UploadSignature';
+import { UploadSignature, SignatureItem } from './components/UploadSignature';
 import dynamic from 'next/dynamic';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ export default function SignPage() {
   
   const [userDetails, setUserDetails] = useState<UserDetails | undefined>();
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [signatures, setSignatures] = useState<SignatureItem[]>([]);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
 
@@ -39,9 +40,12 @@ export default function SignPage() {
     setStep(3);
   };
 
-  const handleNextStep3 = (file: File, preview: string) => {
-    setSignatureFile(file);
-    setSignaturePreview(preview);
+  const handleNextStep3 = (sigs: SignatureItem[]) => {
+    setSignatures(sigs);
+    if (sigs.length > 0) {
+      setSignatureFile(sigs[0].file);
+      setSignaturePreview(sigs[0].previewUrl);
+    }
     setStep(4);
   };
 
@@ -118,11 +122,12 @@ export default function SignPage() {
                 key="step3" 
                 onNext={handleNextStep3} 
                 onBack={goBack} 
+                initialSignatures={signatures}
                 initialFile={signatureFile}
                 initialPreview={signaturePreview}
               />
             )}
-            {step === 4 && pdfFile && signatureFile && signaturePreview && (
+            {step === 4 && pdfFile && signatures.length > 0 && (
               <motion.div
                 key="step4"
                 initial={{ opacity: 0, scale: 0.98 }}
@@ -132,8 +137,9 @@ export default function SignPage() {
               >
                 <PdfEditor 
                   pdfFile={pdfFile}
-                  signatureFile={signatureFile}
-                  signaturePreview={signaturePreview}
+                  signatures={signatures}
+                  signatureFile={signatures[0]?.file || signatureFile || new File([], 'sig.png')}
+                  signaturePreview={signatures[0]?.previewUrl || signaturePreview || ''}
                   onBack={goBack}
                 />
               </motion.div>
