@@ -6,6 +6,9 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
+export const maxDuration = 60;
+export const runtime = 'nodejs';
+
 export async function GET() {
   try {
     await connectToDatabase();

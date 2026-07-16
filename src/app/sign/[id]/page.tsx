@@ -46,8 +46,14 @@ export default function DynamicSignPage() {
 
         // Fetch the PDF file
         const fileRes = await fetch(data.document.fileUrl);
+        if (!fileRes.ok) {
+          throw new Error(`Could not download PDF file (${fileRes.status})`);
+        }
         const blob = await fileRes.blob();
-        const file = new File([blob], data.document.title + '.pdf', { type: 'application/pdf' });
+        if (blob.size === 0) {
+          throw new Error('Downloaded PDF is empty');
+        }
+        const file = new File([blob], data.document.title + '.pdf', { type: blob.type || 'application/pdf' });
         setPdfFile(file);
       } catch (err) {
         setError('Failed to load document. It might have been deleted.');

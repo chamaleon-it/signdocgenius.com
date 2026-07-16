@@ -5,6 +5,9 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
+export const maxDuration = 60;
+export const runtime = 'nodejs';
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
