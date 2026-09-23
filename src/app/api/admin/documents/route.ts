@@ -14,7 +14,11 @@ export async function GET() {
     await connectToDatabase();
     
     // Fetch all documents
-    const documents = await Document.find().sort({ createdAt: -1 });
+    const rawDocuments = await Document.find().sort({ createdAt: -1 });
+    const documents = rawDocuments.map((doc: any) => ({
+      ...doc.toObject(),
+      isActive: doc.isActive !== false,
+    }));
     
     // Fetch all applications
     const applications = await Application.find().populate('documentId').sort({ createdAt: -1 });
@@ -55,6 +59,7 @@ export async function POST(request: Request) {
     const document = await Document.create({
       title,
       fileUrl,
+      isActive: true,
     });
 
     return NextResponse.json({ document });

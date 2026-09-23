@@ -8,6 +8,8 @@ export async function GET() {
     await connectToDatabase();
     
     const totalDocuments = await Document.countDocuments();
+    const activeDocuments = await Document.countDocuments({ isActive: { $ne: false } });
+    const inactiveDocuments = await Document.countDocuments({ isActive: false });
     const totalApplications = await Application.countDocuments();
     const signedApplications = await Application.countDocuments({ status: 'SIGNED' });
     
@@ -19,6 +21,8 @@ export async function GET() {
 
     return NextResponse.json({
       totalDocuments,
+      activeDocuments,
+      inactiveDocuments,
       totalApplications,
       signedApplications,
       recentApplications

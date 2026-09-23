@@ -14,6 +14,10 @@ const DocumentSchema = new mongoose.Schema({
     ref: 'Admin',
     required: false, // Make it optional if we only have one admin to simplify
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
 }, { timestamps: true });
 
 export const Document = mongoose.models.Document || mongoose.model('Document', DocumentSchema);

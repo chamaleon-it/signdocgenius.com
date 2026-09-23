@@ -6,7 +6,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { UserDetailsForm, UserDetails } from '../components/UserDetailsForm';
 import { UploadSignature } from '../components/UploadSignature';
 import dynamic from 'next/dynamic';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, Lock, ShieldAlert, Home } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 const PdfEditor = dynamic(
@@ -23,8 +24,9 @@ export default function DynamicSignPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInactive, setIsInactive] = useState(false);
   
-  const [document, setDocument] = useState<{ _id: string, title: string, fileUrl: string } | null>(null);
+  const [document, setDocument] = useState<{ _id: string, title: string, fileUrl: string, isActive?: boolean } | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | undefined>();
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
@@ -40,8 +42,23 @@ export default function DynamicSignPage() {
     const fetchDoc = async () => {
       try {
         const res = await fetch(`/api/documents/${documentId}`);
-        if (!res.ok) throw new Error('Document not found');
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          if (res.status === 403 || data.isActive === false) {
+            setIsInactive(true);
+            setError(data.error || 'This signing link is inactive or has already been used.');
+            return;
+          }
+          throw new Error(data.error || 'Document not found');
+        }
+
+        if (data.document?.isActive === false) {
+          setIsInactive(true);
+          setError('This signing link is inactive or has already been used.');
+          return;
+        }
+
         setDocument(data.document);
 
         // Fetch the PDF file
@@ -55,8 +72,8 @@ export default function DynamicSignPage() {
         }
         const file = new File([blob], data.document.title + '.pdf', { type: blob.type || 'application/pdf' });
         setPdfFile(file);
-      } catch (err) {
-        setError('Failed to load document. It might have been deleted.');
+      } catch (err: any) {
+        setError(err.message || 'Failed to load document. It might have been deleted.');
       } finally {
         setLoading(false);
       }
@@ -97,11 +114,18 @@ export default function DynamicSignPage() {
       if (res.ok) {
         setStep(4); // Success screen
       } else {
-        alert('Failed to submit document. Please try again.');
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.error || 'Failed to submit document. Please try again.';
+        if (res.status === 403) {
+          setIsInactive(true);
+          setError(errorMsg);
+        } else {
+          alert(errorMsg);
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('An error occurred while submitting.');
+      alert(err.message || 'An error occurred while submitting.');
     } finally {
       setSubmitting(false);
     }
@@ -115,12 +139,66 @@ export default function DynamicSignPage() {
     );
   }
 
+  // Dedicated Inactive / Expired Link Screen
+  if (isInactive) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white p-8 sm:p-10 rounded-3xl shadow-xl border border-slate-200/80 text-center max-w-lg w-full"
+        >
+          <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm ring-8 ring-rose-50/50">
+            <Lock className="w-10 h-10" />
+          </div>
+
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100/80 text-rose-700 mb-3">
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Link Inactive
+          </span>
+
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-3 tracking-tight">
+            Signing Link Inactive or Expired
+          </h1>
+
+          <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-6">
+            This document link is valid for <strong className="text-slate-800">one-time use only</strong>. It has either already been completed or was deactivated by the document sender.
+          </p>
+
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-left text-xs sm:text-sm text-slate-600 mb-8 space-y-1.5">
+            <p className="font-semibold text-slate-800">Need access to this document?</p>
+            <p>Please contact the person or organization who sent you this link. An administrator can re-enable the link or generate a new one for you.</p>
+          </div>
+
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium transition-colors shadow-sm"
+          >
+            <Home className="w-4 h-4" />
+            Back to Home
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (error || !document) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Oops!</h1>
-          <p className="text-slate-500">{error || 'Document not found'}</p>
+        <div className="text-center p-6 max-w-md">
+          <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Document Unavailable</h1>
+          <p className="text-slate-500 mb-6">{error || 'The requested document could not be loaded.'}</p>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white rounded-xl font-medium hover:bg-brand-primary/90 transition-colors"
+          >
+            <Home className="w-4 h-4" />
+            Go Home
+          </Link>
         </div>
       </div>
     );
@@ -138,13 +216,14 @@ export default function DynamicSignPage() {
             <Check size={32} />
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Submitted Successfully!</h2>
-          <p className="text-slate-500 mb-8">Thank you, {userDetails?.name}. Your signed document has been submitted to the admin.</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors"
+          <p className="text-slate-500 mb-2">Thank you, {userDetails?.name}. Your signed document has been submitted to the admin.</p>
+          <p className="text-xs text-slate-400 mb-8">For your security, this signing link has now been deactivated for future use.</p>
+          <Link 
+            href="/"
+            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors block text-center"
           >
             Close
-          </button>
+          </Link>
         </motion.div>
       </div>
     );
