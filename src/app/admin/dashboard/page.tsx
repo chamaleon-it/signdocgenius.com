@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Activity, CheckCircle, Clock, Users, ArrowRight } from 'lucide-react';
+import { FileText, Activity, CheckCircle, Clock, Users, ArrowRight, Link2 } from 'lucide-react';
 import Link from 'next/link';
 
 type AnalyticsData = {
   totalDocuments: number;
+  activeDocuments?: number;
+  inactiveDocuments?: number;
   totalApplications: number;
   signedApplications: number;
   recentApplications: any[];
@@ -42,6 +44,14 @@ export default function DashboardOverview() {
       border: 'border-blue-100',
     },
     {
+      title: 'Active Links',
+      value: data?.activeDocuments ?? 0,
+      icon: Link2,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+      border: 'border-emerald-100',
+    },
+    {
       title: 'Total Submissions',
       value: data?.totalApplications || 0,
       icon: Users,
@@ -56,14 +66,6 @@ export default function DashboardOverview() {
       color: 'text-green-600',
       bg: 'bg-green-50',
       border: 'border-green-100',
-    },
-    {
-      title: 'Pending Signatures',
-      value: Math.max(0, (data?.totalApplications || 0) - (data?.signedApplications || 0)),
-      icon: Clock,
-      color: 'text-orange-600',
-      bg: 'bg-orange-50',
-      border: 'border-orange-100',
     },
   ];
 

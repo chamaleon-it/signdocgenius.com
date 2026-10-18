@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import { Application } from '@/models/Application';
+import { Document } from '@/models/Document';
+import mongoose from 'mongoose';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -20,6 +22,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    if (!mongoose.isValidObjectId(documentId)) {
+      return NextResponse.json({ error: 'Invalid document ID' }, { status: 400 });
+    }
+
+    await connectToDatabase();
+
+    // Verify document exists and is active before processing
+    const document = await Document.findById(documentId);
+    if (!document) {
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
+
+    if (document.isActive === false) {
+      return NextResponse.json(
+        { error: 'This signing link is inactive or has already been used.' },
+        { status: 403 }
+      );
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
@@ -35,7 +56,19 @@ export async function POST(request: Request) {
     await writeFile(filePath, buffer);
     const signedFileUrl = `/uploads/${fileName}`;
 
-    await connectToDatabase();
+    // Atomically deactivate the link to enforce one-time use
+    const updatedDoc = await Document.findOneAndUpdate(
+      { _id: documentId, isActive: { $ne: false } },
+      { isActive: false }
+    );
+
+    if (!updatedDoc) {
+      return NextResponse.json(
+        { error: 'This signing link is inactive or has already been used.' },
+        { status: 403 }
+      );
+    }
+
     const application = await Application.create({
       documentId,
       clientName,
