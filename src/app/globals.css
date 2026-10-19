@@ -29,6 +29,28 @@ body {
   animation: float 6s ease-in-out infinite;
 }
 
+@keyframes signature-pulse {
+  from { box-shadow: 0 0 0 0 rgba(81, 25, 174, 0.35); }
+  to { box-shadow: 0 0 0 10px rgba(81, 25, 174, 0); }
+}
+
+.signature-pulse {
+  position: relative;
+}
+
+.signature-pulse:enabled::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: signature-pulse 1s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signature-pulse:enabled::after { animation: none; }
+}
+
 /* Glassmorphism */
 .glass {
   @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl;
