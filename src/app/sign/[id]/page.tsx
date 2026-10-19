@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
@@ -41,7 +42,7 @@ export default function DynamicSignPage() {
   const steps = [
     { num: 1, title: 'Details' },
     { num: 2, title: 'Signature' },
-    { num: 3, title: 'Review & Submit' }
+    { num: 3, title: 'Review & submit' }
   ];
 
   useEffect(() => {
@@ -140,204 +141,118 @@ export default function DynamicSignPage() {
     }
   };
 
+  let content: React.ReactNode;
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+    content = <div className="flex justify-center pt-24"><Loader2 className="w-8 h-8 animate-spin text-[#5119ae]" /></div>;
+  } else if (isInactive) {
+    content = (
+      <div className="mx-auto max-w-md bg-white rounded-[24px] p-8 text-center shadow-[0_7px_20px_rgba(26,36,51,0.06)]">
+        <Lock className="mx-auto mb-4 text-rose-600" size={40} />
+        <h1 className="text-2xl font-semibold text-[#242333]">Signing link inactive</h1>
+        <p className="mt-3 text-[#636270]">{error || 'This one-time signing link has already been used or deactivated.'}</p>
+        <Link href="/" className="mt-6 h-12 flex items-center justify-center gap-2 rounded-lg bg-[#5119ae] text-white font-semibold"><Home size={17} /> Back to home</Link>
       </div>
     );
-  }
-
-  // Dedicated Inactive / Expired Link Screen
-  if (isInactive) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white p-8 sm:p-10 rounded-3xl shadow-xl border border-slate-200/80 text-center max-w-lg w-full"
-        >
-          <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm ring-8 ring-rose-50/50">
-            <Lock className="w-10 h-10" />
-          </div>
-
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100/80 text-rose-700 mb-3">
-            <ShieldAlert className="w-3.5 h-3.5" />
-            Link Inactive
-          </span>
-
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-3 tracking-tight">
-            Signing Link Inactive or Expired
-          </h1>
-
-          <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-6">
-            This document link is valid for <strong className="text-slate-800">one-time use only</strong>. It has either already been completed or was deactivated by the document sender.
-          </p>
-
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-left text-xs sm:text-sm text-slate-600 mb-8 space-y-1.5">
-            <p className="font-semibold text-slate-800">Need access to this document?</p>
-            <p>Please contact the person or organization who sent you this link. An administrator can re-enable the link or generate a new one for you.</p>
-          </div>
-
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center gap-2 w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium transition-colors shadow-sm"
-          >
-            <Home className="w-4 h-4" />
-            Back to Home
-          </Link>
-        </motion.div>
+  } else if (error || !document) {
+    content = (
+      <div className="mx-auto max-w-md bg-white rounded-[24px] p-8 text-center shadow-[0_7px_20px_rgba(26,36,51,0.06)]">
+        <ShieldAlert className="mx-auto mb-4 text-[#5119ae]" size={40} />
+        <h1 className="text-2xl font-semibold text-[#242333]">Document unavailable</h1>
+        <p className="mt-3 text-[#636270]">{error || 'The requested document could not be loaded.'}</p>
+        <Link href="/" className="mt-6 h-12 flex items-center justify-center gap-2 rounded-lg bg-[#5119ae] text-white font-semibold"><Home size={17} /> Go home</Link>
       </div>
     );
-  }
-
-  if (error || !document) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center p-6 max-w-md">
-          <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert className="w-8 h-8" />
+  } else {
+    content = (
+      <>
+        <h1 className="text-center text-[17px] sm:text-lg font-semibold text-[#242333] mb-5 sm:mb-[22px]">Sign Document: {document.title}</h1>
+        {step < 4 && (
+          <div className="w-full max-w-[552px] mx-auto flex gap-[10px] sm:gap-6 mb-5 sm:mb-[22px]">
+            {steps.map(s => (
+              <div key={s.num} className="flex-1 flex flex-col items-center gap-1.5 sm:gap-2">
+                <span className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-semibold', step >= s.num ? 'bg-[#5119ae] text-white' : 'bg-white text-[#636270]')}>
+                  {step > s.num ? <img src="/figma/check-icon.svg" alt="Completed" /> : s.num}
+                </span>
+                <span className={cn('text-[10px] sm:text-[9px] sm:uppercase sm:tracking-[0.6px] font-semibold text-center whitespace-nowrap', step === s.num ? 'text-[#5119ae]' : 'text-[#636270]')}>{s.title}</span>
+              </div>
+            ))}
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Document Unavailable</h1>
-          <p className="text-slate-500 mb-6">{error || 'The requested document could not be loaded.'}</p>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white rounded-xl font-medium hover:bg-brand-primary/90 transition-colors"
-          >
-            <Home className="w-4 h-4" />
-            Go Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 4) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-md w-full"
-        >
-          <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Check size={32} />
+        )}
+        {step === 4 ? (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[440px] mx-auto bg-white rounded-[24px] p-5 sm:p-8 text-center shadow-[0_7px_20px_rgba(26,36,51,0.06)]">
+            <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-[#e9f7ef] text-emerald-700 flex items-center justify-center"><Check size={28} /></div>
+            <h2 className="text-[24px] font-semibold text-[#242333]">Submitted successfully!</h2>
+            <p className="text-sm text-[#636270] mt-2">Thank you, {userDetails?.name}. Your signed document has been submitted.</p>
+            <p className="text-sm text-[#636270] mt-5">You’re all done.</p>
+            <Link href="/" className="mt-5 h-12 w-full rounded-lg bg-[#eef4f5] text-[#5119ae] font-semibold text-sm flex items-center justify-center">Close</Link>
+          </motion.div>
+        ) : (
+          <div className={cn('relative mx-auto', step === 3 ? 'max-w-[1100px]' : 'max-w-[440px]')}>
+            {submitting && <div className="absolute inset-0 z-50 rounded-[24px] bg-white/80 flex items-center justify-center gap-2 text-[#5119ae] font-medium"><Loader2 className="animate-spin" /> Submitting your document...</div>}
+            <AnimatePresence mode="wait">
+              {step === 1 && <UserDetailsForm key="details" onNext={handleNextStep1} initialData={userDetails} />}
+              {step === 2 && <UploadSignature key="signature" onNext={handleNextStep2} onBack={goBack} initialFile={signatureFile} initialPreview={signaturePreview} />}
+              {step === 3 && pdfFile && signatureFile && signaturePreview && (
+                <motion.div key="review" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
+                  <PdfEditor pdfFile={pdfFile} signatureFile={signatureFile} signaturePreview={signaturePreview} signatureFields={document.signatureFields || []} onBack={goBack} onSave={handleSave} />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Submitted Successfully!</h2>
-          <p className="text-slate-500 mb-2">Thank you, {userDetails?.name}. Your signed document has been submitted to the admin.</p>
-          <p className="text-xs text-slate-400 mb-8">For your security, this signing link has now been deactivated for future use.</p>
-          <Link 
-            href="/"
-            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors block text-center"
-          >
-            Close
-          </Link>
-        </motion.div>
-      </div>
+        )}
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 selection:bg-brand-primary/20 text-slate-900">
-      <div className={cn(
-        "mx-auto px-4 py-12 transition-all duration-500",
-        step === 3 ? "max-w-[98%]" : "max-w-6xl"
-      )}>
-        {/* Header & Progress */}
-        <div className="mb-12">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold">Sign Document: {document.title}</h1>
-          </div>
-          <div className="flex items-center justify-center mb-12">
-            <div className="flex items-center gap-4 w-full max-w-3xl relative">
-              <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-200 -z-10 -translate-y-1/2 rounded-full overflow-hidden">
-                <motion.div 
-                  className="h-full bg-brand-primary"
-                  initial={{ width: '0%' }}
-                  animate={{ width: `${((step - 1) / (steps.length - 1)) * 100}%` }}
-                  transition={{ duration: 0.5, ease: "easeInOut" }}
-                />
-              </div>
-              
-              {steps.map((s) => {
-                const isActive = step === s.num;
-                const isPast = step > s.num;
-                
-                return (
-                  <div key={s.num} className="flex flex-col items-center flex-1 relative z-10">
-                    <div 
-                      className={cn(
-                        "w-12 h-12 rounded-full flex items-center justify-center font-bold text-base transition-all duration-500 mb-3 shadow-xl",
-                        isActive ? "bg-brand-primary text-white shadow-brand-primary/30 ring-4 ring-white" :
-                        isPast ? "bg-brand-primary text-white ring-4 ring-white" :
-                        "bg-white text-slate-400 ring-4 ring-white border border-slate-200"
-                      )}
-                    >
-                      {isPast ? <Check size={20} /> : s.num}
-                    </div>
-                    <span className={cn(
-                      "text-xs font-bold uppercase tracking-widest transition-colors duration-300",
-                      isActive ? "text-brand-primary" : isPast ? "text-slate-600" : "text-slate-400"
-                    )}>
-                      {s.title}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen flex flex-col bg-[#f5fafb] text-[#242333]">
+      <SigningHeader />
+      <main className="w-full flex-1 min-h-[688px] sm:min-h-[766px] px-4 pt-4 sm:pt-11 pb-12">{content}</main>
+      <SigningFooter />
+    </div>
+  );
+}
 
-        {/* Form Area */}
-        <div className="relative min-h-[500px]">
-          {submitting && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-3xl">
-              <div className="flex flex-col items-center">
-                <Loader2 className="w-10 h-10 animate-spin text-brand-primary mb-4" />
-                <p className="font-medium text-slate-700">Submitting your document...</p>
-              </div>
-            </div>
-          )}
-          
-          <AnimatePresence mode="wait">
-            {step === 1 && (
-              <UserDetailsForm 
-                key="step1" 
-                onNext={handleNextStep1} 
-                initialData={userDetails} 
-              />
-            )}
-            {step === 2 && (
-              <UploadSignature 
-                key="step2" 
-                onNext={handleNextStep2} 
-                onBack={goBack} 
-                initialFile={signatureFile}
-                initialPreview={signaturePreview}
-              />
-            )}
-            {step === 3 && pdfFile && signatureFile && signaturePreview && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.4 }}
-              >
-                <PdfEditor 
-                  pdfFile={pdfFile}
-                  signatureFile={signatureFile}
-                  signaturePreview={signaturePreview}
-                  signatureFields={document.signatureFields || []}
-                  onBack={goBack}
-                  onSave={handleSave}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+function SigningHeader() {
+  return (
+    <header className="h-16 sm:h-[60px] px-4 sm:px-[max(24px,calc((100vw-898px)/2))] flex items-center justify-between">
+      <Link href="/" className="flex items-center gap-[5px] font-semibold tracking-[-0.8px] text-[15px] sm:text-[13px]" aria-label="SignDocGenius home">
+        <img src="/figma/sign-brand-icon-mobile.svg" alt="" className="sm:hidden" />
+        <img src="/figma/sign-brand-icon.svg" alt="" className="hidden sm:block" />
+        <span>signdoc<span className="text-[#5119ae]">genius</span></span>
+      </Link>
+      <Link href="/sign" className="h-10 sm:h-8 px-4 sm:px-3 rounded-full bg-[#5119ae] hover:bg-[#430f99] text-white text-xs font-semibold flex items-center">Get Started</Link>
+    </header>
+  );
+}
+
+function SigningFooter() {
+  const groups = [
+    ['Product', 'eSignature', 'Contract Lifecycle Management', 'Document Generation', 'Pricing'],
+    ['Solutions', 'Real Estate', 'Financial Services', 'Human Resources', 'Legal'],
+    ['Support', 'Help Center', 'Community', 'Developer Center', 'Trust Center'],
+  ];
+  return (
+    <footer className="bg-[#0e1929] text-[#94a1b1] text-[11px]">
+      <div className="hidden sm:block max-w-[898px] mx-auto min-h-[453px] pt-12 pb-9">
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-8 min-h-[332px]">
+          <div>
+            <Link href="/" className="inline-flex items-center gap-1 bg-white rounded-md px-1.5 py-1 text-[#242333] font-semibold tracking-[-0.6px]"><img src="/figma/sign-brand-icon-footer.svg" alt="" /><span>signdoc<span className="text-[#5119ae]">genius</span></span></Link>
+            <p className="mt-3 max-w-[250px] leading-[15px]">SignDocGenius helps organizations connect and automate how they prepare, sign, act on, and manage agreements.</p>
+            <h3 className="uppercase text-white text-[10px] font-semibold mt-7 mb-3">Company</h3>
+            <ul className="space-y-3">{['About Us', 'Careers', 'Contact', 'Investors'].map(item => <li key={item}><a href="#" className="hover:text-white">{item}</a></li>)}</ul>
+          </div>
+          {groups.map(group => <div key={group[0]}><h3 className="uppercase text-white text-[10px] font-semibold mb-4">{group[0]}</h3><ul className="space-y-4">{group.slice(1).map(item => <li key={item}><a href="#" className="hover:text-white">{item}</a></li>)}</ul></div>)}
+        </div>
+        <div className="border-t border-[#1d2939] pt-5 flex justify-between text-[9px]">
+          <span>© 2026 SignDocGenius, Inc. All rights reserved.</span>
+          <span>Privacy Policy　 Terms of Use　 Accessibility　 Cookies Settings</span>
         </div>
       </div>
-    </div>
+      <div className="sm:hidden h-[92px] px-4 flex flex-col items-center justify-center gap-2 text-center">
+        <p className="text-white/80">Privacy Policy　·　Terms of Use</p>
+        <p className="text-[10px]">© 2026 SignDocGenius. All rights reserved.</p>
+      </div>
+    </footer>
   );
 }

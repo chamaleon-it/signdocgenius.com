@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Rnd } from 'react-rnd';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, ArrowLeft, ZoomIn, ZoomOut,
-  RotateCw, Maximize2, Trash2, SlidersHorizontal, Loader2,
-  MousePointer2, Plus, GripVertical, X,
+  Trash2, SlidersHorizontal, Loader2,
+  Plus, X,
   FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -18,11 +18,12 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 // DOMMatrix Polyfill for environments where it's missing
 if (typeof window !== 'undefined' && !window.DOMMatrix) {
-  (window as any).DOMMatrix = (window as any).WebKitCSSMatrix || (window as any).MSCSSMatrix || (window as any).DOMMatrix;
+  const fallback = window as Window & { WebKitCSSMatrix?: typeof DOMMatrix; MSCSSMatrix?: typeof DOMMatrix };
+  window.DOMMatrix = fallback.WebKitCSSMatrix || fallback.MSCSSMatrix || window.DOMMatrix;
 }
 
 // Set up the worker for react-pdf
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
 interface ElementBase {
   id: string;
@@ -60,7 +61,7 @@ interface PdfEditorProps {
 export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onBack, onSave }: PdfEditorProps) {
   const [numPages, setNumPages] = useState<number>(1);
   const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
+  const [scale, setScale] = useState<number>(() => typeof window !== 'undefined' && window.innerWidth < 640 ? 0.5 : 1);
   const [elements, setElements] = useState<EditorElement[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -71,6 +72,15 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+
+  const placeInitialSignature = useCallback((width: number, height: number) => {
+    if (signatureFields.length || pageNumber !== 1) return;
+    setElements(current => current.length ? current : [{
+      id: 'initial-signature', type: 'signature', page: 1,
+      x: Math.max(20, width - 210), y: Math.max(20, height - 100),
+      width: 170, height: 70, rotation: 0, opacity: 1,
+    }]);
+  }, [pageNumber, signatureFields.length]);
 
   useEffect(() => {
     const checkFileType = async () => {
@@ -83,6 +93,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
         const img = new Image();
         img.onload = () => {
           setPdfDimensions({ width: img.width, height: img.height });
+          placeInitialSignature(img.width, img.height);
         };
         img.src = url;
       } else {
@@ -90,17 +101,18 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
       }
     };
     checkFileType();
-  }, [pdfFile]);
+  }, [pdfFile, placeInitialSignature]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
   };
 
-  const onPageLoadSuccess = (page: any) => {
+  const onPageLoadSuccess = (page: { originalWidth: number; originalHeight: number }) => {
     setPdfDimensions({
       width: page.originalWidth,
       height: page.originalHeight,
     });
+    placeInitialSignature(page.originalWidth, page.originalHeight);
   };
 
   const addSignature = () => {
@@ -145,10 +157,10 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
           } else {
             bgImage = await pdfDoc.embedJpg(imgBytes);
           }
-        } catch (e) {
+        } catch {
           try {
             bgImage = await pdfDoc.embedPng(imgBytes);
-          } catch (e2) {
+          } catch {
             bgImage = await pdfDoc.embedJpg(imgBytes);
           }
         }
@@ -170,7 +182,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
         } else {
           signatureImage = await pdfDoc.embedJpg(sigBytes);
         }
-      } catch (e) {
+      } catch {
         signatureImage = await pdfDoc.embedPng(sigBytes);
       }
 
@@ -239,7 +251,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
       }
 
       const pdfBytesModified = await pdfDoc.save();
-      const blob = new Blob([pdfBytesModified as any], { type: 'application/pdf' });
+      const blob = new Blob([new Uint8Array(pdfBytesModified)], { type: 'application/pdf' });
       
       if (onSave) {
         onSave(blob);
@@ -268,13 +280,13 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
   const zoomOut = () => setScale(s => Math.max(s - 0.2, 0.5));
 
   return (
-    <div className="w-full h-[85vh] flex flex-col lg:flex-row gap-4">
+    <div className="w-full flex flex-col lg:flex-row gap-3 lg:h-[600px]">
       {/* Sidebar Tools */}
-      <div className="w-full lg:w-20 flex lg:flex-col gap-3 bg-white border border-slate-200 rounded-4xl p-3 shadow-xl shadow-slate-200/50">
+      <div className={cn("w-full lg:w-14 flex lg:flex-col gap-2 bg-white border border-[#e5e4eb] rounded-2xl p-2 shadow-[0_7px_20px_rgba(26,36,51,0.06)]", onSave && "hidden lg:flex")}>
         {signatureFields.length === 0 && (
           <button
             onClick={addSignature}
-            className="flex-1 lg:flex-none aspect-square flex flex-col items-center justify-center rounded-[1.2rem] bg-brand-primary hover:bg-brand-hover text-white transition-all shadow-lg shadow-brand-primary/20 group"
+            className="flex-1 lg:flex-none min-h-11 lg:aspect-square flex flex-col items-center justify-center rounded-xl bg-[#5119ae] hover:bg-[#430f99] text-white transition-all group"
             title="Add Signature"
           >
             <Plus size={22} className="mb-1 group-hover:scale-110 transition-transform" />
@@ -284,7 +296,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
         <div className="hidden lg:block h-px bg-slate-100 my-1" />
         <button
           onClick={onBack}
-          className="flex-1 lg:flex-none aspect-square flex flex-col items-center justify-center rounded-[1.2rem] bg-white border-2 border-slate-100 text-slate-400 hover:text-slate-600 hover:border-slate-200 transition-all group"
+          className="flex-1 lg:flex-none min-h-11 lg:aspect-square flex flex-col items-center justify-center rounded-xl bg-white border border-[#e5e4eb] text-[#636270] hover:text-[#5119ae] transition-all group"
         >
           <ArrowLeft size={22} className="mb-1 group-hover:-translate-x-1 transition-transform" />
           <span className="text-[9px] font-black uppercase tracking-wider">Back</span>
@@ -292,7 +304,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
       </div>
 
       {/* Main Viewport */}
-      <div className="flex-1 bg-white border border-slate-200 rounded-4xl flex flex-col overflow-hidden relative shadow-2xl shadow-slate-200/50">
+      <div className="flex-1 min-w-0 h-[540px] lg:h-auto bg-white border border-[#e5e4eb] rounded-2xl flex flex-col overflow-hidden relative shadow-[0_7px_20px_rgba(26,36,51,0.06)]">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
@@ -304,14 +316,20 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-100 rounded-xl p-1">
+          {onSave && <div className="flex lg:hidden items-center gap-1 text-xs text-[#636270]">
+            {numPages > 1 && <button onClick={() => setPageNumber(p => p - 1)} disabled={pageNumber <= 1} aria-label="Previous page" className="p-1 disabled:opacity-30"><ArrowLeft size={16} /></button>}
+            <span>{pageNumber} / {numPages}</span>
+            {numPages > 1 && <button onClick={() => setPageNumber(p => p + 1)} disabled={pageNumber >= numPages} aria-label="Next page" className="p-1 disabled:opacity-30"><ArrowLeft size={16} className="rotate-180" /></button>}
+            {signatureFields.length === 0 && <button onClick={addSignature} aria-label="Add signature" className="p-1 ml-1 text-[#5119ae]"><Plus size={18} /></button>}
+          </div>}
+          <div className={cn("items-center gap-2 bg-slate-100 rounded-xl p-1", onSave ? "hidden lg:flex" : "flex")}>
             <button onClick={zoomOut} className="p-1.5 text-slate-500 hover:text-brand-primary hover:bg-white rounded-lg transition-all shadow-sm shadow-transparent hover:shadow-slate-200"><ZoomOut size={16} /></button>
             <span className="text-[11px] font-black text-slate-700 w-10 text-center">{Math.round(scale * 100)}%</span>
             <button onClick={zoomIn} className="p-1.5 text-slate-500 hover:text-brand-primary hover:bg-white rounded-lg transition-all shadow-sm shadow-transparent hover:shadow-slate-200"><ZoomIn size={16} /></button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto bg-slate-800 p-4 lg:p-12 flex justify-center items-start scrollbar-hide" ref={containerRef}>
+        <div className="flex-1 overflow-auto bg-[#192b3d] p-4 lg:p-8 flex justify-center items-start scrollbar-hide" ref={containerRef}>
           {isImage ? (
             <div
               className={cn(
@@ -410,7 +428,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
                   </div>
                   <h3 className="text-xl font-black text-slate-900 mb-3">Failed to load PDF</h3>
                   <p className="text-sm text-slate-500 text-center leading-relaxed mb-8">
-                    We couldn't open this file. Please ensure it's a valid PDF document and not an image file.
+                    We couldn&apos;t open this file. Please ensure it&apos;s a valid PDF document and not an image file.
                   </p>
                   <button
                     onClick={onBack}
@@ -526,7 +544,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
         </div>
 
         {/* Page navigation */}
-        <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-white">
+        <div className={cn("p-4 border-t border-slate-100 items-center justify-between bg-white", onSave ? "hidden lg:flex" : "flex")}>
           <div className="flex gap-1.5">
             <button
               disabled={pageNumber <= 1}
@@ -553,12 +571,21 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
           <button
             onClick={handleDownload}
             disabled={isExporting || (elements.length === 0 && signatureFields.length === 0)}
-            className="flex items-center justify-center py-3 px-6 rounded-xl shadow-lg shadow-brand-primary/20 text-xs font-black text-white bg-brand-primary hover:bg-brand-hover disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed transition-all"
+            className="flex items-center justify-center py-2.5 px-3 sm:px-6 rounded-lg text-xs font-semibold text-white bg-[#5119ae] hover:bg-[#430f99] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
           >
             {isExporting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download className="mr-2" size={16} />}
             {isExporting ? 'Processing...' : (onSave ? 'Submit Document' : 'Finish & Download')}
           </button>
         </div>
+        {onSave && <div className="lg:hidden px-5 pt-4 pb-5 border-t border-[#dddbe5] bg-white">
+          <p className="text-xs text-[#636270]">By submitting, you agree to sign this document.</p>
+          <div className="flex gap-3 mt-[18px]">
+            <button onClick={onBack} className="w-24 h-12 shrink-0 rounded-lg bg-[#eef4f5] text-[#5119ae] text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-[#e4eced]"><ArrowLeft size={16} /> Back</button>
+            <button onClick={handleDownload} disabled={isExporting || (elements.length === 0 && signatureFields.length === 0)} className="flex-1 h-12 rounded-lg bg-[#5119ae] text-white text-sm font-semibold hover:bg-[#430f99] disabled:bg-[#e8e6ec] disabled:text-[#777481] disabled:cursor-not-allowed">
+              {isExporting ? 'Processing...' : 'Submit document'}
+            </button>
+          </div>
+        </div>}
       </div>
 
       {/* Element Properties Sidebar */}

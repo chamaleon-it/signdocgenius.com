@@ -6,19 +6,19 @@ import { Footer } from '@/components/Footer';
 
 export function ConditionalHeader() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/sign/')) return null;
   return <Navbar />;
 }
 
 export function ConditionalFooter() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/sign/')) return null;
   return <Footer />;
 }
 
 export function ConditionalMain({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith('/admin');
+  const isAdmin = pathname?.startsWith('/admin') || pathname?.startsWith('/sign/');
   
   return (
     <main className={isAdmin ? 'flex-1' : 'flex-1 pt-24 pb-12'}>

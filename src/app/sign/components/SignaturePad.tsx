@@ -1,181 +1,83 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
-import { Trash2, Eraser, PenTool, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React, { useEffect, useRef, useState } from 'react';
+import { PenTool } from 'lucide-react';
 
 interface SignaturePadProps {
   onSave: (dataUrl: string, file: File) => void;
   onCancel: () => void;
 }
 
-export function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
+export function SignaturePad({ onSave }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState('#000000');
-  const [lineWidth, setLineWidth] = useState(2);
+  const drawing = useRef(false);
   const [isEmpty, setIsEmpty] = useState(true);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas resolution
+    const ratio = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * window.devicePixelRatio;
-    canvas.height = rect.height * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    
-    // Set line styles
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
-  }, [color, lineWidth]);
+    canvas.width = rect.width * ratio;
+    canvas.height = rect.height * ratio;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.scale(ratio, ratio);
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.strokeStyle = '#242333';
+    context.lineWidth = 2;
+  }, []);
 
-  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsDrawing(true);
+  const point = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  };
+
+  const start = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drawing.current = true;
     setIsEmpty(false);
-    draw(e);
+    const { x, y } = point(event);
+    const context = event.currentTarget.getContext('2d');
+    context?.beginPath();
+    context?.moveTo(x, y);
   };
 
-  const stopDrawing = () => {
-    setIsDrawing(false);
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      ctx?.beginPath();
-    }
+  const move = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing.current) return;
+    const { x, y } = point(event);
+    const context = event.currentTarget.getContext('2d');
+    context?.lineTo(x, y);
+    context?.stroke();
   };
 
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    let clientX, clientY;
-
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
+  const stop = () => { drawing.current = false; };
 
   const clear = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
     setIsEmpty(true);
   };
 
-  const handleSave = () => {
+  const save = async () => {
     const canvas = canvasRef.current;
     if (!canvas || isEmpty) return;
-
     const dataUrl = canvas.toDataURL('image/png');
-    
-    // Convert data URL to File
-    fetch(dataUrl)
-      .then(res => res.blob())
-      .then(blob => {
-        const file = new File([blob], 'signature.png', { type: 'image/png' });
-        onSave(dataUrl, file);
-      });
+    const blob = await (await fetch(dataUrl)).blob();
+    onSave(dataUrl, new File([blob], 'signature.png', { type: 'image/png' }));
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex gap-2">
-          {['#000000', '#0000ff', '#ff0000'].map((c) => (
-            <button
-              key={c}
-              onClick={() => setColor(c)}
-              className={cn(
-                "w-6 h-6 rounded-full border-2 transition-all",
-                color === c ? "border-white scale-110" : "border-transparent opacity-50 hover:opacity-100"
-              )}
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Width</span>
-            <input 
-              type="range" 
-              min="1" max="5" 
-              value={lineWidth} 
-              onChange={(e) => setLineWidth(parseInt(e.target.value))}
-              className="w-20 accent-blue-500"
-            />
-          </div>
-          <button 
-            onClick={clear}
-            className="text-slate-400 hover:text-red-400 transition-colors"
-            title="Clear"
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
+    <div>
+      <div className="relative h-[188px] rounded-lg border border-dashed border-[#dddbe5] bg-[#fbfcfd] overflow-hidden">
+        <canvas ref={canvasRef} onPointerDown={start} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop} className="w-full h-full touch-none cursor-crosshair" aria-label="Draw your signature" />
+        {isEmpty && <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-[#636270] text-sm"><PenTool size={28} className="mb-2 text-[#5119ae]" />Draw your signature here</div>}
       </div>
-
-      <div className="relative bg-white rounded-xl overflow-hidden shadow-inner cursor-crosshair h-64 border-2 border-slate-700/50">
-        <canvas
-          ref={canvasRef}
-          onMouseDown={startDrawing}
-          onMouseUp={stopDrawing}
-          onMouseMove={draw}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchEnd={stopDrawing}
-          onTouchMove={draw}
-          className="w-full h-full touch-none"
-        />
-        {isEmpty && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-slate-300">
-            <PenTool size={40} className="mb-2 opacity-20" />
-            <p className="text-sm font-medium opacity-40">Draw your signature here</p>
-          </div>
-        )}
-      </div>
-
-      <div className="flex gap-3 mt-2">
-        <button
-          onClick={onCancel}
-          className="flex-1 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors text-sm font-medium"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={isEmpty}
-          className="flex-1 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
-        >
-          <Check size={16} />
-          Use Signature
-        </button>
+      <div className="flex justify-between gap-3 mt-2">
+        <button onClick={clear} className="h-10 px-4 rounded-lg text-[#5119ae] text-sm font-medium hover:bg-[#eef4f5]">Clear signature</button>
+        <button onClick={save} disabled={isEmpty} className="h-10 px-4 rounded-lg bg-[#5119ae] text-white text-sm font-semibold disabled:bg-[#e8e6ec] disabled:text-[#777481]">Use signature</button>
       </div>
     </div>
   );
