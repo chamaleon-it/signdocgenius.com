@@ -571,7 +571,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
           <button
             onClick={handleDownload}
             disabled={isExporting || (elements.length === 0 && signatureFields.length === 0)}
-            className="flex items-center justify-center py-2.5 px-3 sm:px-6 rounded-lg text-xs font-semibold text-white bg-[#5119ae] hover:bg-[#430f99] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
+            className="flex items-center justify-center py-2.5 px-3 sm:px-6 rounded-lg text-xs font-semibold text-white bg-[#5119ae] hover:bg-[#430f99] disabled:bg-[#715da3] disabled:text-white disabled:cursor-not-allowed transition-all"
           >
             {isExporting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download className="mr-2" size={16} />}
             {isExporting ? 'Processing...' : (onSave ? 'Submit Document' : 'Finish & Download')}
@@ -581,7 +581,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
           <p className="text-xs text-[#636270]">By submitting, you agree to sign this document.</p>
           <div className="flex gap-3 mt-[18px]">
             <button onClick={onBack} className="w-24 h-12 shrink-0 rounded-lg bg-[#eef4f5] text-[#5119ae] text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-[#e4eced]"><ArrowLeft size={16} /> Back</button>
-            <button onClick={handleDownload} disabled={isExporting || (elements.length === 0 && signatureFields.length === 0)} className="flex-1 h-12 rounded-lg bg-[#5119ae] text-white text-sm font-semibold hover:bg-[#430f99] disabled:bg-[#e8e6ec] disabled:text-[#777481] disabled:cursor-not-allowed">
+            <button onClick={handleDownload} disabled={isExporting || (elements.length === 0 && signatureFields.length === 0)} className="flex-1 h-12 rounded-lg bg-[#5119ae] text-white text-sm font-semibold hover:bg-[#430f99] disabled:bg-[#715da3] disabled:text-white disabled:cursor-not-allowed">
               {isExporting ? 'Processing...' : 'Submit document'}
             </button>
           </div>

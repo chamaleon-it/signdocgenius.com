@@ -77,7 +77,7 @@ export function SignaturePad({ onSave }: SignaturePadProps) {
       </div>
       <div className="flex justify-between gap-3 mt-2">
         <button onClick={clear} className="h-10 px-4 rounded-lg text-[#5119ae] text-sm font-medium hover:bg-[#eef4f5]">Clear signature</button>
-        <button onClick={save} disabled={isEmpty} className="h-10 px-4 rounded-lg bg-[#5119ae] text-white text-sm font-semibold disabled:bg-[#e8e6ec] disabled:text-[#777481]">Use signature</button>
+        <button onClick={save} disabled={isEmpty} className="h-10 px-4 rounded-lg bg-[#5119ae] text-white text-sm font-semibold disabled:bg-[#715da3] disabled:text-white disabled:cursor-not-allowed">Use signature</button>
       </div>
     </div>
   );

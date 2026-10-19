@@ -23,10 +23,11 @@ export function UserDetailsForm({ onNext, initialData }: UserDetailsFormProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<UserDetails>({
     resolver: zodResolver(schema),
     defaultValues: initialData,
+    mode: 'onChange',
   });
 
   return (
@@ -51,7 +52,7 @@ export function UserDetailsForm({ onNext, initialData }: UserDetailsFormProps) {
             type="text"
             autoComplete="name"
             aria-invalid={!!errors.name}
-            className="block w-full h-14 px-4 border border-[#dddbe5] rounded-xl text-[#242333] placeholder:text-[#8b8a98] focus:outline-none focus:ring-2 focus:ring-[#5119ae]/20 focus:border-[#5119ae]"
+            className="block w-full h-14 px-4 border border-[#dddbe5] rounded-xl text-[#242333] placeholder:text-[#8b8a98] focus:outline-none focus:border-[#5119ae] focus:ring-[3px] focus:ring-[#5119ae]/20 focus:shadow-[0_0_8px_2px_rgba(81,25,174,0.18)]"
             placeholder="John Doe"
             {...register('name')}
           />
@@ -69,7 +70,7 @@ export function UserDetailsForm({ onNext, initialData }: UserDetailsFormProps) {
             type="email"
             autoComplete="email"
             aria-invalid={!!errors.email}
-            className="block w-full h-14 px-4 border border-[#dddbe5] rounded-xl text-[#242333] placeholder:text-[#8b8a98] focus:outline-none focus:ring-2 focus:ring-[#5119ae]/20 focus:border-[#5119ae]"
+            className="block w-full h-14 px-4 border border-[#dddbe5] rounded-xl text-[#242333] placeholder:text-[#8b8a98] focus:outline-none focus:border-[#5119ae] focus:ring-[3px] focus:ring-[#5119ae]/20 focus:shadow-[0_0_8px_2px_rgba(81,25,174,0.18)]"
             placeholder="john@example.com"
             {...register('email')}
           />
@@ -80,7 +81,9 @@ export function UserDetailsForm({ onNext, initialData }: UserDetailsFormProps) {
 
         <button
           type="submit"
-          className="w-full h-12 flex items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white bg-[#5119ae] hover:bg-[#430f99] focus:outline-none focus:ring-4 focus:ring-[#5119ae]/20 transition-colors"
+          disabled={!isValid}
+          style={isValid ? { boxShadow: '0 4px 10px rgba(81, 25, 174, 0.24), 0 2px 3px rgba(26, 36, 51, 0.12)' } : undefined}
+          className={`w-full h-12 flex items-center justify-center gap-2 rounded-lg text-white text-sm font-semibold transition-all focus:outline-none focus:ring-4 focus:ring-[#5119ae]/20 ${isValid ? 'bg-[#5119ae] hover:bg-[#430f99]' : 'bg-[#715da3] cursor-not-allowed'}`}
         >
           Next step
           <ArrowRight size={17} />

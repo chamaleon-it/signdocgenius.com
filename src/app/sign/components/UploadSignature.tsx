@@ -16,7 +16,7 @@ interface UploadSignatureProps {
 export function UploadSignature({ onNext, onBack, initialFile, initialPreview }: UploadSignatureProps) {
   const [file, setFile] = useState<File | null>(initialFile || null);
   const [preview, setPreview] = useState<string | null>(initialPreview || null);
-  const [mode, setMode] = useState<'upload' | 'draw'>('upload');
+  const [mode, setMode] = useState<'upload' | 'draw'>('draw');
 
   const onDrop = useCallback((files: File[]) => {
     if (files[0]) {
@@ -100,7 +100,7 @@ export function UploadSignature({ onNext, onBack, initialFile, initialPreview }:
         <button onClick={onBack} className="flex-1 h-12 rounded-lg bg-[#eef4f5] text-[#5119ae] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#e4eced]">
           <ArrowLeft size={17} /> Back
         </button>
-        <button onClick={() => file && preview && onNext(file, preview)} disabled={!file || !preview} className="flex-1 h-12 rounded-lg bg-[#5119ae] text-white font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#430f99] disabled:bg-[#e8e6ec] disabled:text-[#777481] disabled:cursor-not-allowed">
+        <button onClick={() => file && preview && onNext(file, preview)} disabled={!file || !preview} className="flex-1 h-12 rounded-lg bg-[#5119ae] text-white font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#430f99] disabled:bg-[#715da3] disabled:text-white disabled:cursor-not-allowed">
           Continue <ArrowRight size={17} />
         </button>
       </div>
