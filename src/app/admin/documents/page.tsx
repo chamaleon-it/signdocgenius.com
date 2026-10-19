@@ -1,16 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Upload, FileText, ExternalLink, Copy, Check, Power, PowerOff, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
+import type { SignatureField } from '@/lib/signature-fields';
+
+const SignatureFieldEditor = dynamic(
+  () => import('./SignatureFieldEditor'),
+  { ssr: false }
+);
 
 type Document = {
   _id: string;
   title: string;
   fileUrl: string;
   isActive: boolean;
+  signatureFields: SignatureField[];
   createdAt: string;
 };
+
+interface EditorSession {
+  pdfFile: File;
+  title: string;
+  documentId?: string;
+  fields: SignatureField[];
+}
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -19,56 +34,100 @@ export default function DocumentsPage() {
   // Upload state
   const [title, setTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [editorSession, setEditorSession] = useState<EditorSession | null>(null);
 
-  useEffect(() => {
-    fetchData();
+  const loadDocuments = useCallback(async (): Promise<Document[]> => {
+    const response = await fetch('/api/admin/documents');
+    if (!response.ok) {
+      throw new Error('Could not load documents.');
+    }
+    const data = await response.json();
+    return data.documents || [];
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const res = await fetch('/api/admin/documents');
-      const data = await res.json();
-      if (data.documents) setDocuments(data.documents);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    let active = true;
+    void loadDocuments()
+      .then((items) => {
+        if (active) setDocuments(items);
+      })
+      .catch((error) => console.error('Error loading documents:', error))
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadDocuments]);
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !title) return;
 
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('file', file);
+    setEditorSession({ pdfFile: file, title, fields: [] });
+    setShowUpload(false);
+  };
 
+  const handleConfigureFields = async (document: Document) => {
     try {
-      const res = await fetch('/api/admin/documents', {
+      const response = await fetch(document.fileUrl);
+      if (!response.ok) {
+        throw new Error(`Could not load the PDF (${response.status}).`);
+      }
+      const blob = await response.blob();
+      const fileName = document.fileUrl.split('/').pop() || `${document.title}.pdf`;
+      const pdfFile = new File([blob], fileName, { type: 'application/pdf' });
+      setEditorSession({
+        pdfFile,
+        title: document.title,
+        documentId: document._id,
+        fields: document.signatureFields || [],
+      });
+    } catch (error) {
+      console.error('Error loading document for signature placement:', error);
+      alert(error instanceof Error ? error.message : 'Could not load this document.');
+    }
+  };
+
+  const saveSignatureFields = async (fields: SignatureField[]) => {
+    if (!editorSession) return;
+
+    if (editorSession.documentId) {
+      const response = await fetch(`/api/admin/documents/${editorSession.documentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signatureFields: fields }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || 'Could not update signature positions.');
+      }
+    } else {
+      const formData = new FormData();
+      formData.append('title', editorSession.title);
+      formData.append('file', editorSession.pdfFile);
+      formData.append('signatureFields', JSON.stringify(fields));
+      const response = await fetch('/api/admin/documents', {
         method: 'POST',
         body: formData,
       });
-
-      if (res.ok) {
-        setTitle('');
-        setFile(null);
-        setShowUpload(false);
-        fetchData();
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        alert(`Upload failed: ${errorData.error || res.statusText || 'File may exceed size limit'}`);
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || 'Could not upload the document.');
       }
-    } catch (err: any) {
-      console.error(err);
-      alert(`Upload error: ${err.message || 'Network or size limit error'}`);
-    } finally {
-      setUploading(false);
+      setTitle('');
+      setFile(null);
+    }
+
+    setEditorSession(null);
+    try {
+      setDocuments(await loadDocuments());
+    } catch (error) {
+      console.error('Error refreshing documents:', error);
+      alert('The changes were saved, but the document list could not be refreshed.');
     }
   };
 
@@ -90,9 +149,9 @@ export default function DocumentsPage() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Failed to update link status');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      alert(`Could not update link status: ${err.message || 'Unknown error'}`);
+      alert(`Could not update link status: ${err instanceof Error ? err.message : 'Unknown error'}`);
       // Revert optimistic update
       setDocuments((prev) =>
         prev.map((d) => (d._id === id ? { ...d, isActive: !newStatus } : d))
@@ -110,6 +169,22 @@ export default function DocumentsPage() {
   };
 
   if (loading) return <div className="p-8">Loading documents...</div>;
+
+  if (editorSession) {
+    return (
+      <SignatureFieldEditor
+        pdfFile={editorSession.pdfFile}
+        initialFields={editorSession.fields}
+        onCancel={() => {
+          const isNewDocument = !editorSession.documentId;
+          setEditorSession(null);
+          if (isNewDocument) setShowUpload(true);
+        }}
+        onSave={saveSignatureFields}
+        saveLabel={editorSession.documentId ? 'Save positions' : 'Upload and create link'}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -161,10 +236,10 @@ export default function DocumentsPage() {
             </div>
             <button 
               type="submit" 
-              disabled={uploading || !file || !title}
+              disabled={!file || !title}
               className="w-full bg-brand-primary text-white py-2 rounded-lg font-medium hover:bg-brand-primary/90 transition-colors disabled:opacity-50"
             >
-              {uploading ? 'Uploading...' : 'Upload PDF'}
+              Continue to signature positions
             </button>
           </form>
         </motion.div>
@@ -247,6 +322,13 @@ export default function DocumentsPage() {
                             Enable
                           </button>
                         )}
+                        <button
+                          onClick={() => handleConfigureFields(doc)}
+                          className="flex items-center gap-2 rounded-lg border border-brand-primary/20 bg-brand-primary/5 px-3 py-1.5 text-xs font-medium text-brand-primary transition-colors hover:bg-brand-primary/10"
+                          title={doc.signatureFields?.length ? 'Edit signature positions' : 'Configure signature positions'}
+                        >
+                          {doc.signatureFields?.length ? 'Edit positions' : 'Set positions'}
+                        </button>
                         <button 
                           onClick={() => copyLink(doc._id)}
                           className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-medium transition-colors"

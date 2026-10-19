@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { UserDetailsForm, UserDetails } from '../components/UserDetailsForm';
 import { UploadSignature } from '../components/UploadSignature';
@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import { Check, Loader2, Lock, ShieldAlert, Home } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import type { SignatureField } from '@/lib/signature-fields';
 
 const PdfEditor = dynamic(
   () => import('../components/PdfEditor').then(mod => mod.PdfEditor),
@@ -17,7 +18,6 @@ const PdfEditor = dynamic(
 
 export default function DynamicSignPage() {
   const params = useParams();
-  const router = useRouter();
   const documentId = params.id as string;
 
   const [step, setStep] = useState<number>(1);
@@ -26,7 +26,13 @@ export default function DynamicSignPage() {
   const [error, setError] = useState<string | null>(null);
   const [isInactive, setIsInactive] = useState(false);
   
-  const [document, setDocument] = useState<{ _id: string, title: string, fileUrl: string, isActive?: boolean } | null>(null);
+  const [document, setDocument] = useState<{
+    _id: string;
+    title: string;
+    fileUrl: string;
+    isActive?: boolean;
+    signatureFields?: SignatureField[];
+  } | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | undefined>();
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
@@ -72,8 +78,8 @@ export default function DynamicSignPage() {
         }
         const file = new File([blob], data.document.title + '.pdf', { type: blob.type || 'application/pdf' });
         setPdfFile(file);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load document. It might have been deleted.');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load document. It might have been deleted.');
       } finally {
         setLoading(false);
       }
@@ -105,6 +111,9 @@ export default function DynamicSignPage() {
       formData.append('clientName', userDetails.name);
       formData.append('clientEmail', userDetails.email);
       formData.append('file', file);
+      if (document?.signatureFields?.length && signatureFile) {
+        formData.append('signature', signatureFile);
+      }
 
       const res = await fetch('/api/applications', {
         method: 'POST',
@@ -123,9 +132,9 @@ export default function DynamicSignPage() {
           alert(errorMsg);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      alert(err.message || 'An error occurred while submitting.');
+      alert(err instanceof Error ? err.message : 'An error occurred while submitting.');
     } finally {
       setSubmitting(false);
     }
@@ -320,6 +329,7 @@ export default function DynamicSignPage() {
                   pdfFile={pdfFile}
                   signatureFile={signatureFile}
                   signaturePreview={signaturePreview}
+                  signatureFields={document.signatureFields || []}
                   onBack={goBack}
                   onSave={handleSave}
                 />

@@ -8,10 +8,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, ArrowLeft, ZoomIn, ZoomOut,
   RotateCw, Maximize2, Trash2, SlidersHorizontal, Loader2,
-  Type, MousePointer2, Plus, GripVertical, X,
+  MousePointer2, Plus, GripVertical, X,
   FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { fitSignatureToField, type SignatureField } from '@/lib/signature-fields';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -51,11 +52,12 @@ interface PdfEditorProps {
   pdfFile: File;
   signatureFile: File;
   signaturePreview: string;
+  signatureFields?: SignatureField[];
   onBack: () => void;
   onSave?: (blob: Blob) => void;
 }
 
-export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEditorProps) {
+export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onBack, onSave }: PdfEditorProps) {
   const [numPages, setNumPages] = useState<number>(1);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -115,21 +117,6 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
     };
     setElements([...elements, newSig]);
     setSelectedId(newSig.id);
-  };
-
-  const addText = () => {
-    const newText: TextElement = {
-      id: `text-${Date.now()}`,
-      type: 'text',
-      x: 50,
-      y: 150,
-      text: 'Click to edit',
-      fontSize: 16,
-      color: '#000000',
-      page: pageNumber
-    };
-    setElements([...elements, newText]);
-    setSelectedId(newText.id);
   };
 
   const updateElement = (id: string, updates: Partial<EditorElement>) => {
@@ -230,6 +217,27 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
         }
       }
 
+      for (const field of signatureFields) {
+        const activePage = pages[field.page - 1];
+        if (!activePage) continue;
+        const { width, height } = activePage.getSize();
+        const fieldWidth = field.width * width;
+        const fieldHeight = field.height * height;
+        const imageFit = fitSignatureToField(
+          fieldWidth,
+          fieldHeight,
+          signatureImage.width,
+          signatureImage.height
+        );
+
+        activePage.drawImage(signatureImage, {
+          x: field.x * width + imageFit.x,
+          y: height - ((field.y + field.height) * height) + imageFit.y,
+          width: imageFit.width,
+          height: imageFit.height,
+        });
+      }
+
       const pdfBytesModified = await pdfDoc.save();
       const blob = new Blob([pdfBytesModified as any], { type: 'application/pdf' });
       
@@ -263,22 +271,16 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
     <div className="w-full h-[85vh] flex flex-col lg:flex-row gap-4">
       {/* Sidebar Tools */}
       <div className="w-full lg:w-20 flex lg:flex-col gap-3 bg-white border border-slate-200 rounded-4xl p-3 shadow-xl shadow-slate-200/50">
-        <button
-          onClick={addSignature}
-          className="flex-1 lg:flex-none aspect-square flex flex-col items-center justify-center rounded-[1.2rem] bg-brand-primary hover:bg-brand-hover text-white transition-all shadow-lg shadow-brand-primary/20 group"
-          title="Add Signature"
-        >
-          <Plus size={22} className="mb-1 group-hover:scale-110 transition-transform" />
-          <span className="text-[9px] font-black uppercase tracking-wider">Sign</span>
-        </button>
-        <button
-          onClick={addText}
-          className="flex-1 lg:flex-none aspect-square flex flex-col items-center justify-center rounded-[1.2rem] bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all group"
-          title="Add Text"
-        >
-          <Type size={22} className="mb-1 group-hover:scale-110 transition-transform" />
-          <span className="text-[9px] font-black uppercase tracking-wider">Text</span>
-        </button>
+        {signatureFields.length === 0 && (
+          <button
+            onClick={addSignature}
+            className="flex-1 lg:flex-none aspect-square flex flex-col items-center justify-center rounded-[1.2rem] bg-brand-primary hover:bg-brand-hover text-white transition-all shadow-lg shadow-brand-primary/20 group"
+            title="Add Signature"
+          >
+            <Plus size={22} className="mb-1 group-hover:scale-110 transition-transform" />
+            <span className="text-[9px] font-black uppercase tracking-wider">Sign</span>
+          </button>
+        )}
         <div className="hidden lg:block h-px bg-slate-100 my-1" />
         <button
           onClick={onBack}
@@ -499,6 +501,25 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
                     )}
                   </Rnd>
                 ))}
+                {signatureFields.filter((field) => field.page === pageNumber).map((field) => (
+                  <div
+                    key={field.id}
+                    className="pointer-events-none absolute z-10"
+                    style={{
+                      left: field.x * pdfDimensions.width * scale,
+                      top: field.y * pdfDimensions.height * scale,
+                      width: field.width * pdfDimensions.width * scale,
+                      height: field.height * pdfDimensions.height * scale,
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={signaturePreview}
+                      alt="Signature placement"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                ))}
               </div>
             </Document>
           )}
@@ -531,7 +552,7 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
 
           <button
             onClick={handleDownload}
-            disabled={isExporting || elements.length === 0}
+            disabled={isExporting || (elements.length === 0 && signatureFields.length === 0)}
             className="flex items-center justify-center py-3 px-6 rounded-xl shadow-lg shadow-brand-primary/20 text-xs font-black text-white bg-brand-primary hover:bg-brand-hover disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed transition-all"
           >
             {isExporting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download className="mr-2" size={16} />}
@@ -640,4 +661,3 @@ export function PdfEditor({ pdfFile, signaturePreview, onBack, onSave }: PdfEdit
     </div>
   );
 }
-

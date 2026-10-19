@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
 
+const SignatureFieldSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  page: { type: Number, required: true },
+  x: { type: Number, required: true },
+  y: { type: Number, required: true },
+  width: { type: Number, required: true },
+  height: { type: Number, required: true },
+}, { _id: false });
+
 const DocumentSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -17,6 +26,10 @@ const DocumentSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true,
+  },
+  signatureFields: {
+    type: [SignatureFieldSchema],
+    default: [],
   },
 }, { timestamps: true });
 

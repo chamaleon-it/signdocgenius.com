@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import { Document } from '@/models/Document';
 import mongoose from 'mongoose';
+import { parseSignatureFields } from '@/lib/signature-fields';
 
 export const runtime = 'nodejs';
 
@@ -17,19 +18,41 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid document ID' }, { status: 400 });
     }
 
-    const body = await request.json();
-    if (typeof body.isActive !== 'boolean') {
+    const body: unknown = await request.json();
+    if (typeof body !== 'object' || body === null) {
       return NextResponse.json(
-        { error: 'Invalid payload: isActive (boolean) is required' },
+        { error: 'Invalid payload' },
         { status: 400 }
       );
+    }
+
+    const updates: { isActive?: boolean; signatureFields?: ReturnType<typeof parseSignatureFields> } = {};
+    const payload = body as Record<string, unknown>;
+    if ('isActive' in payload) {
+      if (typeof payload.isActive !== 'boolean') {
+        return NextResponse.json({ error: 'isActive must be a boolean' }, { status: 400 });
+      }
+      updates.isActive = payload.isActive;
+    }
+    if ('signatureFields' in payload) {
+      const signatureFields = parseSignatureFields(payload.signatureFields);
+      if (!signatureFields) {
+        return NextResponse.json(
+          { error: 'At least one valid signature position is required' },
+          { status: 400 }
+        );
+      }
+      updates.signatureFields = signatureFields;
+    }
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid document updates provided' }, { status: 400 });
     }
 
     await connectToDatabase();
 
     const document = await Document.findByIdAndUpdate(
       id,
-      { isActive: body.isActive },
+      updates,
       { new: true }
     );
 
