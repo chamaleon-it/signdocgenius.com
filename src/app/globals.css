@@ -30,7 +30,7 @@ body {
 }
 
 @keyframes signature-pulse {
-  from { box-shadow: 0 0 0 0 rgba(81, 25, 174, 0.35); }
+  from { box-shadow: 0 0 0 0 rgba(81, 25, 174, 0.45); }
   to { box-shadow: 0 0 0 10px rgba(81, 25, 174, 0); }
 }
 
