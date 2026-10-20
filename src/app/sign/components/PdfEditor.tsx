@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Rnd } from 'react-rnd';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFImage, rgb, StandardFonts } from 'pdf-lib';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, ArrowLeft, ZoomIn, ZoomOut,
@@ -54,11 +54,12 @@ interface PdfEditorProps {
   signatureFile: File;
   signaturePreview: string;
   signatureFields?: SignatureField[];
+  signaturePreviews?: Record<string, string>;
   onBack: () => void;
   onSave?: (blob: Blob) => void;
 }
 
-export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onBack, onSave }: PdfEditorProps) {
+export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], signaturePreviews = {}, onBack, onSave }: PdfEditorProps) {
   const [numPages, setNumPages] = useState<number>(1);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(() => typeof window !== 'undefined' && window.innerWidth < 640 ? 0.5 : 1);
@@ -173,17 +174,20 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
 
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-      const sigResponse = await fetch(signaturePreview);
-      const sigBytes = await sigResponse.arrayBuffer();
-      let signatureImage;
-      try {
-        if (signaturePreview.includes('png') || signaturePreview.startsWith('data:image/png')) {
-          signatureImage = await pdfDoc.embedPng(sigBytes);
-        } else {
-          signatureImage = await pdfDoc.embedJpg(sigBytes);
+      const embedSignature = async (preview: string): Promise<PDFImage> => {
+        const bytes = await (await fetch(preview)).arrayBuffer();
+        try {
+          return await pdfDoc.embedPng(bytes);
+        } catch {
+          return pdfDoc.embedJpg(bytes);
         }
-      } catch {
-        signatureImage = await pdfDoc.embedPng(sigBytes);
+      };
+      const signatureImage = signatureFields.length ? null : await embedSignature(signaturePreview);
+      const signatureImages = new Map<string, PDFImage>();
+      for (const field of signatureFields) {
+        const preview = signaturePreviews[field.id];
+        if (!preview) throw new Error(`Missing signature for position ${field.id}`);
+        signatureImages.set(field.id, await embedSignature(preview));
       }
 
       const pages = pdfDoc.getPages();
@@ -197,7 +201,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
         const ratioX = pdfWidth / pdfDimensions.width;
         const ratioY = pdfHeight / pdfDimensions.height;
 
-        if (el.type === 'signature') {
+        if (el.type === 'signature' && signatureImage) {
           const finalWidth = el.width * ratioX;
           const finalHeight = el.height * ratioY;
           const finalX = el.x * ratioX;
@@ -232,17 +236,18 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
       for (const field of signatureFields) {
         const activePage = pages[field.page - 1];
         if (!activePage) continue;
+        const fieldImage = signatureImages.get(field.id)!;
         const { width, height } = activePage.getSize();
         const fieldWidth = field.width * width;
         const fieldHeight = field.height * height;
         const imageFit = fitSignatureToField(
           fieldWidth,
           fieldHeight,
-          signatureImage.width,
-          signatureImage.height
+          fieldImage.width,
+          fieldImage.height
         );
 
-        activePage.drawImage(signatureImage, {
+        activePage.drawImage(fieldImage, {
           x: field.x * width + imageFit.x,
           y: height - ((field.y + field.height) * height) + imageFit.y,
           width: imageFit.width,
@@ -532,8 +537,8 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], onB
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={signaturePreview}
-                      alt="Signature placement"
+                      src={signaturePreviews[field.id]}
+                      alt={`Client ${signatureFields.indexOf(field) + 1} signature placement`}
                       className="h-full w-full object-contain"
                     />
                   </div>

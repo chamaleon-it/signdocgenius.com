@@ -7,6 +7,13 @@ export interface SignatureField {
   height: number;
 }
 
+export function getFieldSignatures(formData: FormData, fields: SignatureField[]): File[] | null {
+  const signatures = fields.map((field) => formData.get(`signature:${field.id}`));
+  return signatures.every((signature) => signature instanceof File && signature.size > 0)
+    ? signatures as File[]
+    : null;
+}
+
 export function fitSignatureToField(
   fieldWidth: number,
   fieldHeight: number,

@@ -7,7 +7,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join, resolve, sep } from 'path';
 import { existsSync } from 'fs';
 import { PDFDocument } from 'pdf-lib';
-import { fitSignatureToField, parseSignatureFields } from '@/lib/signature-fields';
+import { fitSignatureToField, getFieldSignatures, parseSignatureFields } from '@/lib/signature-fields';
 
 export const maxDuration = 60;
 export const runtime = 'nodejs';
@@ -19,7 +19,6 @@ export async function POST(request: Request) {
     const clientName = formData.get('clientName') as string;
     const clientEmail = formData.get('clientEmail') as string;
     const file = formData.get('file');
-    const signature = formData.get('signature');
 
     if (
       !documentId ||
@@ -54,10 +53,6 @@ export async function POST(request: Request) {
     let buffer: Buffer;
     const configuredFields = document.signatureFields || [];
     if (configuredFields.length > 0) {
-      if (!(signature instanceof File) || signature.size === 0) {
-        return NextResponse.json({ error: 'A client signature is required' }, { status: 400 });
-      }
-
       const uploadsDir = resolve(process.cwd(), 'public', 'uploads');
       const storedFileName = /^\/uploads\/([^/\\]+)$/.exec(document.fileUrl)?.[1];
       if (!storedFileName) {
@@ -74,26 +69,27 @@ export async function POST(request: Request) {
       if (!fields) {
         return NextResponse.json({ error: 'Document signature positions are invalid' }, { status: 500 });
       }
-
-      const signatureBytes = await signature.arrayBuffer();
-      let signatureImage;
-      try {
-        if (signature.type === 'image/png') {
-          signatureImage = await pdfDoc.embedPng(signatureBytes);
-        } else if (signature.type === 'image/jpeg' || signature.type === 'image/jpg') {
-          signatureImage = await pdfDoc.embedJpg(signatureBytes);
-        } else {
-          return NextResponse.json(
-            { error: 'Signature must be a PNG or JPEG image' },
-            { status: 400 }
-          );
-        }
-      } catch {
-        return NextResponse.json({ error: 'Could not read the signature image' }, { status: 400 });
+      const signatures = getFieldSignatures(formData, fields);
+      if (!signatures) {
+        return NextResponse.json({ error: 'A separate signature is required for each position' }, { status: 400 });
       }
 
       const pages = pdfDoc.getPages();
-      for (const field of fields) {
+      for (const [index, field] of fields.entries()) {
+        const signature = signatures[index];
+        let signatureImage;
+        try {
+          const bytes = await signature.arrayBuffer();
+          if (signature.type === 'image/png') {
+            signatureImage = await pdfDoc.embedPng(bytes);
+          } else if (signature.type === 'image/jpeg' || signature.type === 'image/jpg') {
+            signatureImage = await pdfDoc.embedJpg(bytes);
+          } else {
+            return NextResponse.json({ error: 'Signatures must be PNG or JPEG images' }, { status: 400 });
+          }
+        } catch {
+          return NextResponse.json({ error: 'Could not read a signature image' }, { status: 400 });
+        }
         const page = pages[field.page - 1];
         const { width, height } = page.getSize();
         const fieldWidth = field.width * width;

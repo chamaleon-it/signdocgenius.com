@@ -38,6 +38,10 @@ export default function DynamicSignPage() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+  const [signatures, setSignatures] = useState<Record<string, { file: File; preview: string }>>({});
+  const [signatureIndex, setSignatureIndex] = useState(0);
+  const signatureFields = document?.signatureFields || [];
+  const activeField = signatureFields[signatureIndex];
 
   const steps = [
     { num: 1, title: 'Details' },
@@ -94,12 +98,27 @@ export default function DynamicSignPage() {
   };
 
   const handleNextStep2 = (file: File, preview: string) => {
+    if (activeField) {
+      setSignatures((current) => ({ ...current, [activeField.id]: { file, preview } }));
+      if (signatureIndex < signatureFields.length - 1) {
+        setSignatureIndex((index) => index + 1);
+      } else {
+        setStep(3);
+      }
+      return;
+    }
     setSignatureFile(file);
     setSignaturePreview(preview);
     setStep(3);
   };
 
-  const goBack = () => setStep(s => Math.max(1, s - 1));
+  const goBack = () => {
+    if (step === 2 && signatureIndex > 0) {
+      setSignatureIndex((index) => index - 1);
+    } else {
+      setStep((current) => Math.max(1, current - 1));
+    }
+  };
 
   const handleSave = async (blob: Blob) => {
     if (!userDetails || !documentId) return;
@@ -112,8 +131,10 @@ export default function DynamicSignPage() {
       formData.append('clientName', userDetails.name);
       formData.append('clientEmail', userDetails.email);
       formData.append('file', file);
-      if (document?.signatureFields?.length && signatureFile) {
-        formData.append('signature', signatureFile);
+      for (const field of signatureFields) {
+        const signature = signatures[field.id];
+        if (!signature) throw new Error(`Client ${signatureFields.indexOf(field) + 1} signature is required.`);
+        formData.append(`signature:${field.id}`, signature.file);
       }
 
       const res = await fetch('/api/applications', {
@@ -191,10 +212,10 @@ export default function DynamicSignPage() {
             {submitting && <div className="absolute inset-0 z-50 rounded-[24px] bg-white/80 flex items-center justify-center gap-2 text-[#5119ae] font-medium"><Loader2 className="animate-spin" /> Submitting your document...</div>}
             <AnimatePresence mode="wait">
               {step === 1 && <UserDetailsForm key="details" onNext={handleNextStep1} initialData={userDetails} />}
-              {step === 2 && <UploadSignature key="signature" onNext={handleNextStep2} onBack={goBack} initialFile={signatureFile} initialPreview={signaturePreview} />}
-              {step === 3 && pdfFile && signatureFile && signaturePreview && (
+              {step === 2 && <UploadSignature key={activeField?.id || 'signature'} onNext={handleNextStep2} onBack={goBack} initialFile={activeField ? signatures[activeField.id]?.file : signatureFile} initialPreview={activeField ? signatures[activeField.id]?.preview : signaturePreview} position={activeField ? signatureIndex + 1 : undefined} totalPositions={activeField ? signatureFields.length : undefined} />}
+              {step === 3 && pdfFile && (signatureFields.length ? signatureFields.every((field) => signatures[field.id]) : !!signatureFile && !!signaturePreview) && (
                 <motion.div key="review" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
-                  <PdfEditor pdfFile={pdfFile} signatureFile={signatureFile} signaturePreview={signaturePreview} signatureFields={document.signatureFields || []} onBack={goBack} onSave={handleSave} />
+                  <PdfEditor pdfFile={pdfFile} signatureFile={signatureFields.length ? signatures[signatureFields[0].id].file : signatureFile!} signaturePreview={signatureFields.length ? signatures[signatureFields[0].id].preview : signaturePreview!} signatureFields={signatureFields} signaturePreviews={Object.fromEntries(Object.entries(signatures).map(([id, value]) => [id, value.preview]))} onBack={goBack} onSave={handleSave} />
                 </motion.div>
               )}
             </AnimatePresence>

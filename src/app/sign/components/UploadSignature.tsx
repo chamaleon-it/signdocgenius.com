@@ -11,9 +11,11 @@ interface UploadSignatureProps {
   onBack: () => void;
   initialFile?: File | null;
   initialPreview?: string | null;
+  position?: number;
+  totalPositions?: number;
 }
 
-export function UploadSignature({ onNext, onBack, initialFile, initialPreview }: UploadSignatureProps) {
+export function UploadSignature({ onNext, onBack, initialFile, initialPreview, position, totalPositions }: UploadSignatureProps) {
   const [file, setFile] = useState<File | null>(initialFile || null);
   const [preview, setPreview] = useState<string | null>(initialPreview || null);
   const [mode, setMode] = useState<'upload' | 'draw'>('draw');
@@ -47,8 +49,8 @@ export function UploadSignature({ onNext, onBack, initialFile, initialPreview }:
       className="w-full max-w-[440px] mx-auto bg-white rounded-[24px] p-5 sm:p-6 shadow-[0_7px_20px_rgba(26,36,51,0.06)]"
     >
       <div className="text-center mb-[18px]">
-        <h2 className="text-[24px] font-semibold text-[#242333] leading-[34px]">Your Signature</h2>
-        <p className="text-sm text-[#636270]">{preview ? 'Check your signature below.' : 'Draw your signature or upload an image.'}</p>
+        <h2 className="text-[24px] font-semibold text-[#242333] leading-[34px]">{position ? `Client ${position} Signature` : 'Your Signature'}</h2>
+        <p className="text-sm text-[#636270]">{position && totalPositions ? `Signature ${position} of ${totalPositions}. ` : ''}{preview ? 'Check your signature below.' : position ? 'Draw or upload a signature for this position.' : 'Draw your signature or upload an image.'}</p>
       </div>
 
       {preview ? (

@@ -130,6 +130,7 @@ export default function SignatureFieldEditor({
                 size={{ width: field.width * pageWidth, height: field.height * pageHeight }}
                 minWidth={60}
                 minHeight={30}
+                cancel=".remove-signature-position"
                 onDragStop={(_event, position) => updateField(field.id, {
                   x: position.x / pageWidth,
                   y: position.y / pageHeight,
@@ -143,13 +144,14 @@ export default function SignatureFieldEditor({
                 className="group border-2 border-dashed border-brand-primary bg-brand-primary/10"
               >
                 <div className="flex h-full items-center justify-center text-center text-xs font-bold text-brand-primary">
-                  Client signature
+                  Client {fields.findIndex((item) => item.id === field.id) + 1} signature
                 </div>
                 <button
                   type="button"
-                  aria-label="Remove signature position"
+                  aria-label={`Remove Client ${fields.findIndex((item) => item.id === field.id) + 1} signature position`}
+                  onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => setFields((current) => current.filter((item) => item.id !== field.id))}
-                  className="absolute -right-3 -top-3 rounded-full bg-rose-600 p-1 text-white shadow"
+                  className="remove-signature-position absolute -right-3 -top-3 z-10 rounded-full bg-rose-600 p-1 text-white shadow"
                 >
                   <Trash2 size={14} />
                 </button>
