@@ -8,6 +8,11 @@ import { join, resolve, sep } from 'path';
 import { existsSync } from 'fs';
 import { PDFDocument } from 'pdf-lib';
 import { fitSignatureToField, getFieldSignatures, parseSignatureFields } from '@/lib/signature-fields';
+import {
+  parsePdfTextFieldValues,
+  setPdfTextFieldValues,
+  type PdfTextFieldValues,
+} from '@/lib/pdf-form-fields';
 
 export const maxDuration = 60;
 export const runtime = 'nodejs';
@@ -19,6 +24,7 @@ export async function POST(request: Request) {
     const clientName = formData.get('clientName') as string;
     const clientEmail = formData.get('clientEmail') as string;
     const file = formData.get('file');
+    const formFieldValuesEntry = formData.get('formFieldValues');
 
     if (
       !documentId ||
@@ -29,6 +35,21 @@ export async function POST(request: Request) {
       !(file instanceof File)
     ) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+    if (formFieldValuesEntry !== null && typeof formFieldValuesEntry !== 'string') {
+      return NextResponse.json({ error: 'Invalid PDF form field values' }, { status: 400 });
+    }
+
+    let formFieldValues: PdfTextFieldValues | null = null;
+    if (typeof formFieldValuesEntry === 'string') {
+      try {
+        formFieldValues = parsePdfTextFieldValues(JSON.parse(formFieldValuesEntry));
+      } catch {
+        return NextResponse.json({ error: 'Invalid PDF form field values' }, { status: 400 });
+      }
+      if (!formFieldValues) {
+        return NextResponse.json({ error: 'Invalid PDF form field values' }, { status: 400 });
+      }
     }
 
     if (!mongoose.isValidObjectId(documentId)) {
@@ -65,6 +86,12 @@ export async function POST(request: Request) {
 
       const originalPdf = await readFile(originalPdfPath);
       const pdfDoc = await PDFDocument.load(originalPdf);
+      if (formFieldValues && !setPdfTextFieldValues(pdfDoc, formFieldValues)) {
+        return NextResponse.json(
+          { error: 'One or more edited form fields are not valid for this document' },
+          { status: 400 }
+        );
+      }
       const fields = parseSignatureFields(configuredFields, pdfDoc.getPageCount());
       if (!fields) {
         return NextResponse.json({ error: 'Document signature positions are invalid' }, { status: 500 });

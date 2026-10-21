@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fitSignatureToField, type SignatureField } from '@/lib/signature-fields';
+import { setPdfTextFieldValues, type PdfTextFieldValues } from '@/lib/pdf-form-fields';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -56,7 +57,7 @@ interface PdfEditorProps {
   signatureFields?: SignatureField[];
   signaturePreviews?: Record<string, string>;
   onBack: () => void;
-  onSave?: (blob: Blob) => void;
+  onSave?: (blob: Blob, formFieldValues: PdfTextFieldValues) => void;
 }
 
 export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], signaturePreviews = {}, onBack, onSave }: PdfEditorProps) {
@@ -65,6 +66,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], sig
   const [scale, setScale] = useState<number>(() => typeof window !== 'undefined' && window.innerWidth < 640 ? 0.5 : 1);
   const [elements, setElements] = useState<EditorElement[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const formFieldValuesRef = useRef<PdfTextFieldValues>({});
 
   const [isExporting, setIsExporting] = useState(false);
   const [pdfDimensions, setPdfDimensions] = useState({ width: 0, height: 0 });
@@ -73,6 +75,39 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], sig
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+
+  const rememberPdfFormValue = useCallback((target: EventTarget | null) => {
+    if (
+      !(target instanceof HTMLInputElement) &&
+      !(target instanceof HTMLTextAreaElement) &&
+      !(target instanceof HTMLSelectElement)
+    ) {
+      return;
+    }
+    if (!target.name) return;
+    if (target instanceof HTMLInputElement && !['text', 'date', 'number', 'email', 'tel'].includes(target.type)) {
+      return;
+    }
+
+    formFieldValuesRef.current = {
+      ...formFieldValuesRef.current,
+      [target.name]: target.value,
+    };
+  }, []);
+
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page) return;
+
+    const rememberInput = (event: Event) => rememberPdfFormValue(event.target);
+    page.addEventListener('input', rememberInput, true);
+    page.addEventListener('change', rememberInput, true);
+
+    return () => {
+      page.removeEventListener('input', rememberInput, true);
+      page.removeEventListener('change', rememberInput, true);
+    };
+  }, [pageNumber, pdfDimensions.width, rememberPdfFormValue]);
 
   const placeInitialSignature = useCallback((width: number, height: number) => {
     if (signatureFields.length || pageNumber !== 1) return;
@@ -143,9 +178,26 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], sig
 
   const selectedElement = elements.find(el => el.id === selectedId);
 
+  const restorePdfFormValues = () => {
+    if (!pageRef.current) return;
+
+    const controls = pageRef.current.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('[name]');
+    for (const control of controls) {
+      const value = formFieldValuesRef.current[control.name];
+      if (value !== undefined) control.value = value;
+    }
+  };
+
   const handleDownload = async () => {
     try {
       setIsExporting(true);
+
+      if (pageRef.current) {
+        const controls = pageRef.current.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('[name]');
+        for (const control of controls) {
+          rememberPdfFormValue(control);
+        }
+      }
 
       let pdfDoc;
       if (isImage) {
@@ -170,6 +222,11 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], sig
       } else {
         const pdfBytes = await pdfFile.arrayBuffer();
         pdfDoc = await PDFDocument.load(pdfBytes);
+      }
+
+      const submittedFormValues = { ...formFieldValuesRef.current };
+      if (!setPdfTextFieldValues(pdfDoc, submittedFormValues)) {
+        throw new Error('One or more edited form fields are not valid for this document.');
       }
 
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -259,7 +316,7 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], sig
       const blob = new Blob([new Uint8Array(pdfBytesModified)], { type: 'application/pdf' });
       
       if (onSave) {
-        onSave(blob);
+        onSave(blob, submittedFormValues);
         return;
       }
 
@@ -460,7 +517,9 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], sig
                   scale={scale}
                   onLoadSuccess={onPageLoadSuccess}
                   renderTextLayer={false}
-                  renderAnnotationLayer={false}
+                  renderAnnotationLayer
+                  renderForms
+                  onRenderAnnotationLayerSuccess={restorePdfFormValues}
                 />
 
                 {/* Elements Overlay */}
@@ -547,6 +606,11 @@ export function PdfEditor({ pdfFile, signaturePreview, signatureFields = [], sig
             </Document>
           )}
         </div>
+        {onSave && (
+          <p className="px-5 py-2 border-t border-slate-100 bg-white text-xs text-[#636270]">
+            Click the PDF form fields to fill or update them before submitting.
+          </p>
+        )}
 
         {/* Page navigation */}
         <div className={cn("p-4 border-t border-slate-100 items-center justify-between bg-white", onSave ? "hidden lg:flex" : "flex")}>

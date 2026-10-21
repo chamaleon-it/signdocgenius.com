@@ -11,6 +11,7 @@ import { Check, Loader2, Lock, ShieldAlert, Home } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import type { SignatureField } from '@/lib/signature-fields';
+import type { PdfTextFieldValues } from '@/lib/pdf-form-fields';
 
 const PdfEditor = dynamic(
   () => import('../components/PdfEditor').then(mod => mod.PdfEditor),
@@ -24,6 +25,7 @@ export default function DynamicSignPage() {
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [signedFileUrl, setSignedFileUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isInactive, setIsInactive] = useState(false);
   
@@ -120,7 +122,7 @@ export default function DynamicSignPage() {
     }
   };
 
-  const handleSave = async (blob: Blob) => {
+  const handleSave = async (blob: Blob, formFieldValues: PdfTextFieldValues) => {
     if (!userDetails || !documentId) return;
     setSubmitting(true);
     
@@ -131,6 +133,7 @@ export default function DynamicSignPage() {
       formData.append('clientName', userDetails.name);
       formData.append('clientEmail', userDetails.email);
       formData.append('file', file);
+      formData.append('formFieldValues', JSON.stringify(formFieldValues));
       for (const field of signatureFields) {
         const signature = signatures[field.id];
         if (!signature) throw new Error(`Client ${signatureFields.indexOf(field) + 1} signature is required.`);
@@ -143,6 +146,11 @@ export default function DynamicSignPage() {
       });
 
       if (res.ok) {
+        const data = await res.json();
+        if (typeof data.application?.signedFileUrl !== 'string') {
+          throw new Error('The signed document was saved, but its link could not be loaded.');
+        }
+        setSignedFileUrl(data.application.signedFileUrl);
         setStep(4); // Success screen
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -205,6 +213,16 @@ export default function DynamicSignPage() {
             <h2 className="text-[24px] font-semibold text-[#242333]">Submitted successfully!</h2>
             <p className="text-sm text-[#636270] mt-2">Thank you, {userDetails?.name}. Your signed document has been submitted.</p>
             <p className="text-sm text-[#636270] mt-5">You’re all done.</p>
+            {signedFileUrl && (
+              <a
+                href={signedFileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 h-12 w-full rounded-lg bg-[#5119ae] text-white font-semibold text-sm flex items-center justify-center"
+              >
+                View signed document
+              </a>
+            )}
             <Link href="/" className="mt-5 h-12 w-full rounded-lg bg-[#eef4f5] text-[#5119ae] font-semibold text-sm flex items-center justify-center">Close</Link>
           </motion.div>
         ) : (
